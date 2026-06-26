@@ -15,6 +15,8 @@ const STATUS: Record<string, { label: string; color: string }> = {
 export default function AdminOrdersClient({ orders }: { orders: any[] }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
   const router = useRouter()
 
   const filtered = orders
@@ -28,6 +30,8 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
       ].filter(Boolean).join(' ').toLowerCase()
       return haystack.includes(search.toLowerCase())
     })
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="p-4 sm:p-6">
@@ -35,9 +39,9 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
         <div className="flex flex-wrap items-center gap-3 p-4 sm:p-5 border-b border-gray-100">
           <div className="relative w-full sm:w-auto">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหา..." className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="ค้นหา..." className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72" />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }} className="px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
             <option value="all">สถานะทั้งหมด</option>
             <option value="pending_review">รอตรวจสอบ</option>
             <option value="processing">กำลังดำเนินการ</option>
@@ -61,7 +65,7 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filtered.map((o) => (
+            {paginated.map((o) => (
               <tr key={o.id} onClick={() => router.push(`/dashboard/admin/orders/${o.id}`)} className="hover:bg-gray-50 cursor-pointer">
                 <td className="px-5 py-3.5 font-mono text-xs text-gray-700">{o.order_number}</td>
                 <td className="px-5 py-3.5 text-gray-900">{o.customer?.company_name ?? '-'}</td>
@@ -77,9 +81,20 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
                 <td className="px-5 py-3.5"><ChevronRight size={16} className="text-gray-400" /></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่พบคำสั่งซื้อ</td></tr>}
+            {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่พบคำสั่งซื้อ</td></tr>}
           </tbody>
         </table></div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(page - 1)} disabled={page === 1} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1).reduce<(number | '...')[]>((acc, n, i, arr) => { if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...'); acc.push(n); return acc }, []).map((n, i) => n === '...' ? <span key={`e${i}`} className="px-2">…</span> : <button key={n} onClick={() => setPage(n as number)} className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${page === n ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>{n}</button>)}
+              <button onClick={() => setPage(page + 1)} disabled={page === totalPages} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

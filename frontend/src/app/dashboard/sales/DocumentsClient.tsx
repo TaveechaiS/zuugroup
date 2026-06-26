@@ -38,6 +38,8 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
   const [phase, setPhase] = useState<'active' | 'finished' | 'all'>('active')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
   const [previewPdf, setPreviewPdf] = useState<{ html: string; filename: string; title: string; data: DocData; isQuotation: boolean } | null>(null)
   const [viewing, setViewing] = useState<any>(null)
   const [viewingFull, setViewingFull] = useState<any>(null)
@@ -90,6 +92,9 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
         return haystack.includes(search.toLowerCase())
       })
   }, [tab, phase, search, statusFilter, quotations, orders])
+
+  const totalPages = Math.max(1, Math.ceil(combined.length / PAGE_SIZE))
+  const paginated = combined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const statusOptions = useMemo(() => {
     if (tab === 'quotation') return Object.entries(Q_STATUS).map(([k, v]) => ({ value: k, label: v.label }))
@@ -180,7 +185,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
               { id: 'quotation' as const, label: 'ใบเสนอราคา' },
               { id: 'order' as const, label: 'คำสั่งซื้อ' },
             ].map((t) => (
-              <button key={t.id} onClick={() => { setTab(t.id); setStatusFilter('all') }}
+              <button key={t.id} onClick={() => { setTab(t.id); setStatusFilter('all'); setPage(1) }}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium ${tab === t.id ? 'bg-white shadow-sm text-blue-700' : 'text-gray-600'}`}>
                 {t.label}
               </button>
@@ -192,7 +197,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
               { id: 'finished' as const, label: 'เสร็จสิ้น' },
               { id: 'all' as const, label: 'ทั้งหมด' },
             ].map((p) => (
-              <button key={p.id} onClick={() => { setPhase(p.id); setStatusFilter('all') }}
+              <button key={p.id} onClick={() => { setPhase(p.id); setStatusFilter('all'); setPage(1) }}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium ${phase === p.id ? 'bg-white shadow-sm text-indigo-700' : 'text-gray-600'}`}>
                 {p.label}
               </button>
@@ -200,10 +205,10 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
           </div>
           <div className="relative w-full sm:w-auto">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ค้นหา..."
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="ค้นหา..."
               className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56" />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
             <option value="all">สถานะทั้งหมด</option>
             {statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -224,7 +229,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {combined.map((doc) => (
+            {paginated.map((doc) => (
               <tr key={`${doc.type}-${doc.id}`} className="hover:bg-gray-50">
                 <td className="px-5 py-3.5 font-mono text-xs text-gray-700">
                   <div>{doc.number}</div>
@@ -276,9 +281,36 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
                 </td>
               </tr>
             ))}
-            {combined.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่มีเอกสาร</td></tr>}
+            {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่มีเอกสาร</td></tr>}
           </tbody>
         </table></div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, combined.length)} จาก {combined.length} รายการ</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(page - 1)} disabled={page === 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                .reduce<(number | '...')[]>((acc, n, i, arr) => {
+                  if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...')
+                  acc.push(n)
+                  return acc
+                }, [])
+                .map((n, i) =>
+                  n === '...'
+                    ? <span key={`e${i}`} className="px-2">…</span>
+                    : <button key={n} onClick={() => setPage(n as number)}
+                        className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${page === n ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        {n}
+                      </button>
+                )}
+              <button onClick={() => setPage(page + 1)} disabled={page === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <PdfPreviewModal
