@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, ChevronRight } from 'lucide-react'
+import { Search, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 
 const STATUS: Record<string, { label: string; color: string }> = {
   pending_review: { label: 'รอตรวจสอบ', color: 'bg-yellow-100 text-yellow-700' },
@@ -17,7 +17,21 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'total_amount' | 'created_at' | 'status' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const router = useRouter()
+
+  const toggleSort = (key: 'total_amount' | 'created_at' | 'status') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'total_amount' | 'created_at' | 'status' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
 
   const filtered = orders
     .filter((o) => statusFilter === 'all' || o.status === statusFilter)
@@ -30,8 +44,20 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
       ].filter(Boolean).join(' ').toLowerCase()
       return haystack.includes(search.toLowerCase())
     })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    if (sortKey === 'total_amount') {
+      const av = Number(a.total_amount ?? 0), bv = Number(b.total_amount ?? 0)
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    if (sortKey === 'created_at') {
+      const av = new Date(a.created_at).getTime(), bv = new Date(b.created_at).getTime()
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : filtered
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="p-4 sm:p-6">
@@ -58,9 +84,9 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
               <th className="text-left px-5 py-3">เลขที่</th>
               <th className="text-left px-5 py-3">ลูกค้า</th>
               <th className="text-left px-5 py-3">ผู้สร้าง</th>
-              <th className="text-right px-5 py-3">มูลค่า</th>
-              <th className="text-center px-5 py-3">สถานะ</th>
-              <th className="text-left px-5 py-3">วันที่</th>
+              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('total_amount')}>มูลค่า<SortIcon k="total_amount" /></th>
+              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>สถานะ<SortIcon k="status" /></th>
+              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('created_at')}>วันที่<SortIcon k="created_at" /></th>
               <th className="px-5 py-3"></th>
             </tr>
           </thead>
@@ -87,7 +113,7 @@ export default function AdminOrdersClient({ orders }: { orders: any[] }) {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} จาก {sorted.length} รายการ</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1).reduce<(number | '...')[]>((acc, n, i, arr) => { if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...'); acc.push(n); return acc }, []).map((n, i) => n === '...' ? <span key={`e${i}`} className="px-2">…</span> : <button key={n} onClick={() => setPage(n as number)} className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${page === n ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>{n}</button>)}

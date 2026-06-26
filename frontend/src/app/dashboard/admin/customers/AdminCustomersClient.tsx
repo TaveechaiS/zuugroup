@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, Eye } from 'lucide-react'
+import { Plus, Search, Eye, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import CustomerFormClient from '@/components/shared/CustomerFormClient'
 import { CustomerDetailModal } from '@/components/shared/CustomersViewClient'
@@ -14,7 +14,21 @@ export default function AdminCustomersClient({ customers, onReload }: Props) {
   const [viewing, setViewing] = useState<any>(null)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'company_name' | 'customer_code' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const router = useRouter()
+
+  const toggleSort = (key: 'company_name' | 'customer_code') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'company_name' | 'customer_code' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
 
   const filtered = customers.filter((c) => {
     const haystack = [
@@ -24,8 +38,12 @@ export default function AdminCustomersClient({ customers, onReload }: Props) {
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(search.toLowerCase())
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : filtered
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   if (showForm) {
     return (
@@ -52,7 +70,7 @@ export default function AdminCustomersClient({ customers, onReload }: Props) {
         <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-              <th className="text-left px-5 py-3">บริษัท</th>
+              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('company_name')}>บริษัท<SortIcon k="company_name" /></th>
               <th className="text-left px-5 py-3">ผู้ติดต่อ</th>
               <th className="text-left px-5 py-3">โทรศัพท์</th>
               <th className="text-left px-5 py-3">อีเมล</th>
@@ -81,12 +99,13 @@ export default function AdminCustomersClient({ customers, onReload }: Props) {
               </tr>
             ))}
             {paginated.length === 0 && <tr><td colSpan={6} className="text-center py-10 text-gray-400">ไม่พบลูกค้า</td></tr>}
+
           </tbody>
         </table></div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} จาก {sorted.length} รายการ</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>

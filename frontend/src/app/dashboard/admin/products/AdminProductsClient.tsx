@@ -2,15 +2,32 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, Edit2, Trash2, Upload, X } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Upload, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+
+type SortKey = 'product_code' | 'quantity' | 'price_per_unit' | 'status'
+type SortDir = 'asc' | 'desc'
 import { productsApi } from '@/lib/api/services'
 
 interface Props { products: any[]; categories: any[]; onReload: () => void }
 
 export default function AdminProductsClient({ products, categories, onReload }: Props) {
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [error, setError] = useState('')
@@ -32,8 +49,21 @@ export default function AdminProductsClient({ products, categories, onReload }: 
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(search.toLowerCase())
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    let av = a[sortKey] ?? ''
+    let bv = b[sortKey] ?? ''
+    if (sortKey === 'quantity' || sortKey === 'price_per_unit') {
+      av = Number(av); bv = Number(bv)
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    return sortDir === 'asc'
+      ? String(av).localeCompare(String(bv), 'th')
+      : String(bv).localeCompare(String(av), 'th')
+  }) : filtered
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const blankForm = {
     name: '', product_code: '',
@@ -90,13 +120,13 @@ export default function AdminProductsClient({ products, categories, onReload }: 
         <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-              <th className="text-left px-5 py-3">รหัส</th>
+              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>รหัส<SortIcon k="product_code" /></th>
               <th className="text-left px-5 py-3">ชื่อสินค้า</th>
               <th className="text-left px-5 py-3">หมวดหมู่</th>
-              <th className="text-right px-5 py-3">คงเหลือ</th>
+              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>คงเหลือ<SortIcon k="quantity" /></th>
               <th className="text-right px-5 py-3">ต้นทุน</th>
-              <th className="text-right px-5 py-3">ราคาขาย</th>
-              <th className="text-center px-5 py-3">สถานะ</th>
+              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>ราคาขาย<SortIcon k="price_per_unit" /></th>
+              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>สถานะ<SortIcon k="status" /></th>
               <th className="text-center px-5 py-3">จัดการ</th>
             </tr>
           </thead>

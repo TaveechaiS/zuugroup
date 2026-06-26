@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Download, Eye, Edit2, X, FileText, ShoppingCart } from 'lucide-react'
+import { Search, Download, Eye, Edit2, X, FileText, ShoppingCart, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { generateQuotationPdf, generateOrderPdf, buildQuotationHtml, buildOrderHtml, type DocData } from '@/lib/pdf/documentPdf'
 import { quotationsApi, ordersApi } from '@/lib/api/services'
 import PdfPreviewModal from '@/components/shared/PdfPreviewModal'
@@ -40,6 +40,20 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'total_amount' | 'created_at' | 'type' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const toggleSort = (key: 'total_amount' | 'created_at' | 'type') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'total_amount' | 'created_at' | 'type' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
   const [previewPdf, setPreviewPdf] = useState<{ html: string; filename: string; title: string; data: DocData; isQuotation: boolean } | null>(null)
   const [viewing, setViewing] = useState<any>(null)
   const [viewingFull, setViewingFull] = useState<any>(null)
@@ -93,8 +107,20 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
       })
   }, [tab, phase, search, statusFilter, quotations, orders])
 
-  const totalPages = Math.max(1, Math.ceil(combined.length / PAGE_SIZE))
-  const paginated = combined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sortedCombined = sortKey ? [...combined].sort((a, b) => {
+    if (sortKey === 'total_amount') {
+      const av = Number(a.total_amount ?? 0), bv = Number(b.total_amount ?? 0)
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    if (sortKey === 'created_at') {
+      const av = new Date(a.created_at).getTime(), bv = new Date(b.created_at).getTime()
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : combined
+  const totalPages = Math.max(1, Math.ceil(sortedCombined.length / PAGE_SIZE))
+  const paginated = sortedCombined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const statusOptions = useMemo(() => {
     if (tab === 'quotation') return Object.entries(Q_STATUS).map(([k, v]) => ({ value: k, label: v.label }))
@@ -220,11 +246,11 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">เลขที่</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ประเภท</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('type')}>ประเภท<SortIcon k="type" /></th>
               <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ลูกค้า</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">มูลค่า</th>
+              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('total_amount')}>มูลค่า<SortIcon k="total_amount" /></th>
               <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">วันที่</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('created_at')}>วันที่<SortIcon k="created_at" /></th>
               <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">จัดการ</th>
             </tr>
           </thead>
@@ -287,7 +313,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, combined.length)} จาก {combined.length} รายการ</span>
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedCombined.length)} จาก {sortedCombined.length} รายการ</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>

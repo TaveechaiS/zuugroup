@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, X, Eye } from 'lucide-react'
+import { Search, X, Eye, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 
 interface Props {
   customers: any[]
@@ -12,6 +12,20 @@ export default function CustomersViewClient({ customers }: Props) {
   const [viewing, setViewing] = useState<any>(null)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'company_name' | 'customer_code' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const toggleSort = (key: 'company_name' | 'customer_code') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'company_name' | 'customer_code' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
 
   const filtered = customers.filter((c) => {
     const haystack = [
@@ -21,8 +35,12 @@ export default function CustomersViewClient({ customers }: Props) {
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(search.toLowerCase())
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : filtered
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="p-6">
@@ -44,7 +62,7 @@ export default function CustomersViewClient({ customers }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ชื่อบริษัท</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('company_name')}>ชื่อบริษัท<SortIcon k="company_name" /></th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ผู้ติดต่อ</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">เบอร์</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ที่อยู่</th>
@@ -76,7 +94,7 @@ export default function CustomersViewClient({ customers }: Props) {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} จาก {sorted.length} รายการ</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>

@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, X, Package, Calendar, Tag, Layers, Image as ImageIcon } from 'lucide-react'
+import { Search, X, Package, Calendar, Tag, Layers, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+
+type SortKey = 'product_code' | 'quantity' | 'price_per_unit' | 'status'
+type SortDir = 'asc' | 'desc'
 
 interface Props {
   products: any[]
@@ -11,8 +14,22 @@ export default function ProductsViewClient({ products }: Props) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [viewing, setViewing] = useState<any>(null)
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
 
   const categories = Array.from(new Set(products.map((p) => p.category?.name).filter(Boolean)))
 
@@ -26,8 +43,21 @@ export default function ProductsViewClient({ products }: Props) {
     const matchCat = !category || p.category?.name === category
     return matchSearch && matchCat
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    let av = a[sortKey] ?? ''
+    let bv = b[sortKey] ?? ''
+    if (sortKey === 'quantity' || sortKey === 'price_per_unit') {
+      av = Number(av); bv = Number(bv)
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    return sortDir === 'asc'
+      ? String(av).localeCompare(String(bv), 'th')
+      : String(bv).localeCompare(String(av), 'th')
+  }) : filtered
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="p-6">
@@ -57,13 +87,13 @@ export default function ProductsViewClient({ products }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">รหัส</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>รหัส<SortIcon k="product_code" /></th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ชื่อสินค้า</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">หมวดหมู่</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">คงเหลือ</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ราคา/หน่วย</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>คงเหลือ<SortIcon k="quantity" /></th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>ราคา/หน่วย<SortIcon k="price_per_unit" /></th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">หน่วย</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
+                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>สถานะ<SortIcon k="status" /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
