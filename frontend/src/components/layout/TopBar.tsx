@@ -130,14 +130,6 @@ export default function TopBar({ title }: Props) {
       <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate flex-1 lg:flex-initial">{title}</h2>
 
       <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-        {/* Desktop: search inline. Mobile: icon toggle */}
-        <div className="hidden md:block relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            placeholder="ค้นหา..."
-            className="pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-40 lg:w-56"
-          />
-        </div>
         <button
           onClick={() => setShowSearch(!showSearch)}
           className="md:hidden p-2 rounded-lg hover:bg-gray-100"
