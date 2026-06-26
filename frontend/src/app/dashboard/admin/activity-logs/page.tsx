@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import TopBar from '@/components/layout/TopBar'
-import { Search } from 'lucide-react'
+import { Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { activityLogsApi } from '@/lib/api/services'
 
 const ROLE_LABELS: Record<string, string> = { admin: 'ผู้ดูแล', manager: 'ผู้จัดการ', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร' }
@@ -52,6 +52,20 @@ export default function ActivityLogsPage() {
   const [actionFilter, setActionFilter] = useState('all')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'created_at' | 'user' | 'action' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const toggleSort = (key: 'created_at' | 'user' | 'action') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'created_at' | 'user' | 'action' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
 
   useEffect(() => {
     activityLogsApi.list().then((d) => setLogs(d ?? [])).finally(() => setLoading(false))
@@ -74,8 +88,21 @@ export default function ActivityLogsPage() {
       ].filter(Boolean).join(' ').toLowerCase()
       return haystack.includes(search.toLowerCase())
     }), [logs, search, actionFilter])
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    if (sortKey === 'created_at') {
+      const av = new Date(a.created_at).getTime(), bv = new Date(b.created_at).getTime()
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    if (sortKey === 'user') {
+      const av = `${a.user?.first_name ?? ''} ${a.user?.last_name ?? ''}`.trim()
+      const bv = `${b.user?.first_name ?? ''} ${b.user?.last_name ?? ''}`.trim()
+      return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+    }
+    const av = String(a.action ?? ''), bv = String(b.action ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : filtered
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="flex flex-col h-full">
@@ -99,10 +126,10 @@ export default function ActivityLogsPage() {
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-                <th className="text-left px-5 py-3">เวลา</th>
-                <th className="text-left px-5 py-3">ผู้ใช้</th>
+                <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('created_at')}>เวลา<SortIcon k="created_at" /></th>
+                <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('user')}>ผู้ใช้<SortIcon k="user" /></th>
                 <th className="text-left px-5 py-3">บทบาท</th>
-                <th className="text-left px-5 py-3">การกระทำ</th>
+                <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('action')}>การกระทำ<SortIcon k="action" /></th>
                 <th className="text-left px-5 py-3">รายละเอียด</th>
               </tr>
             </thead>
@@ -131,7 +158,7 @@ export default function ActivityLogsPage() {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-              <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+              <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} จาก {sorted.length} รายการ</span>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage(page - 1)} disabled={page === 1} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1).reduce<(number | '...')[]>((acc, n, i, arr) => { if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...'); acc.push(n); return acc }, []).map((n, i) => n === '...' ? <span key={`e${i}`} className="px-2">…</span> : <button key={n} onClick={() => setPage(n as number)} className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${page === n ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>{n}</button>)}

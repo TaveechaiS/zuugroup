@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Search, Plus, Edit2, Trash2, X } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { usersApi, zonesApi } from '@/lib/api/services'
 
 const ROLE_LABELS: Record<string, string> = { admin: 'ผู้ดูแล', manager: 'ผู้จัดการ', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร' }
@@ -14,7 +14,21 @@ export default function UsersClient({ users, teams, onReload }: Props) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 20
+  const [sortKey, setSortKey] = useState<'first_name' | 'role' | 'is_active' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [error, setError] = useState('')
+
+  const toggleSort = (key: 'first_name' | 'role' | 'is_active') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+    setPage(1)
+  }
+  const SortIcon = ({ k }: { k: 'first_name' | 'role' | 'is_active' }) => {
+    if (sortKey !== k) return <ChevronsUpDown size={13} className="text-gray-300 ml-1 inline" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={13} className="text-blue-500 ml-1 inline" />
+      : <ChevronDown size={13} className="text-blue-500 ml-1 inline" />
+  }
   const [viewing, setViewing] = useState<any>(null)
 
   const [form, setForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'sales', team_id: '', zone_id: '', phone: '' })
@@ -30,8 +44,16 @@ export default function UsersClient({ users, teams, onReload }: Props) {
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(search.toLowerCase())
   })
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    if (sortKey === 'is_active') {
+      const av = a.is_active ? 1 : 0, bv = b.is_active ? 1 : 0
+      return sortDir === 'asc' ? av - bv : bv - av
+    }
+    const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
+    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+  }) : filtered
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const startAdd = () => {
     setEditing(null)
@@ -78,11 +100,11 @@ export default function UsersClient({ users, teams, onReload }: Props) {
         <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-              <th className="text-left px-5 py-3">ชื่อ-นามสกุล</th>
+              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('first_name')}>ชื่อ-นามสกุล<SortIcon k="first_name" /></th>
               <th className="text-left px-5 py-3">อีเมล</th>
-              <th className="text-center px-5 py-3">บทบาท</th>
+              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('role')}>บทบาท<SortIcon k="role" /></th>
               <th className="text-left px-5 py-3">ทีม</th>
-              <th className="text-center px-5 py-3">สถานะ</th>
+              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('is_active')}>สถานะ<SortIcon k="is_active" /></th>
               <th className="text-center px-5 py-3">จัดการ</th>
             </tr>
           </thead>
@@ -112,7 +134,7 @@ export default function UsersClient({ users, teams, onReload }: Props) {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} จาก {sorted.length} รายการ</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).filter((n) => n === 1 || n === totalPages || Math.abs(n - page) <= 1).reduce<(number | '...')[]>((acc, n, i, arr) => { if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...'); acc.push(n); return acc }, []).map((n, i) => n === '...' ? <span key={`e${i}`} className="px-2">…</span> : <button key={n} onClick={() => setPage(n as number)} className={`px-3 py-1.5 rounded-lg border text-sm font-medium ${page === n ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 hover:bg-gray-50'}`}>{n}</button>)}
