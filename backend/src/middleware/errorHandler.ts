@@ -1,6 +1,6 @@
-// src/middleware/errorHandler.ts
 import { Request, Response, NextFunction } from 'express'
 import { translateError } from '../lib/translateError'
+import { HttpError } from '../lib/httpError'
 
 export const asyncHandler =
   (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
@@ -10,9 +10,14 @@ export const asyncHandler =
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
   console.error('[ERROR]', err)
 
+  if (err instanceof HttpError) {
+    return res.status(err.status).json(
+      typeof err.payload === 'string' ? { error: err.payload } : err.payload
+    )
+  }
+
   const status = err.status ?? 400
 
-  // Pull the raw message. Zod errors have a .issues array — turn into a hint.
   let rawMsg: string = err.message ?? ''
   if (Array.isArray(err.issues) && err.issues.length > 0) {
     const first = err.issues[0]

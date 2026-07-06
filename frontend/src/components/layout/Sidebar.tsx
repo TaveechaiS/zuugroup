@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, FileText, FileBarChart, FolderOpen, ShoppingCart,
   Users, UserPlus, Package, UsersRound, ClipboardList, Activity,
-  FilePlus, Plus, LogOut, X, MapPin, ChevronDown, ChevronRight,
+  FilePlus, Plus, X, MapPin, ChevronDown, ChevronRight,
 } from 'lucide-react'
-import { logout } from '@/lib/api/auth'
 import { badgesApi } from '@/lib/api/services'
 import { useUI } from '@/lib/ui-context'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   role: 'admin' | 'manager' | 'sales' | 'cfo'
-  user: any
+  user?: any
   mobileOpen: boolean
   onMobileClose: () => void
 }
@@ -34,92 +34,88 @@ interface NavGroup { id: string; label: string; items: NavItem[] }
 
 const NAV: Record<string, NavGroup[]> = {
   admin: [
-    { id: 'main', label: 'หลัก', items: [
-      { href: '/dashboard/admin', label: 'แดชบอร์ด', icon: LayoutDashboard },
-      { href: '/dashboard/admin/reports', label: 'รายงาน', icon: FileBarChart },
+    { id: 'main', label: 'sidebar.group.main', items: [
+      { href: '/dashboard/admin', label: 'sidebar.dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/admin/reports', label: 'sidebar.reports', icon: FileBarChart },
     ]},
-    { id: 'docs', label: 'เอกสาร', items: [
-      { href: '/dashboard/admin/customer-requests', label: 'คำขอเพิ่มลูกค้า', icon: ClipboardList },
-      { href: '/dashboard/admin/orders', label: 'คำสั่งซื้อ', icon: ShoppingCart },
+    { id: 'docs', label: 'sidebar.group.docs', items: [
+      { href: '/dashboard/admin/customer-requests', label: 'sidebar.customer_requests', icon: ClipboardList },
+      { href: '/dashboard/admin/orders', label: 'sidebar.orders', icon: ShoppingCart },
     ]},
-    { id: 'master', label: 'ข้อมูลหลัก', items: [
-      { href: '/dashboard/admin/customers', label: 'จัดการลูกค้า', icon: UserPlus },
-      { href: '/dashboard/admin/products', label: 'จัดการสินค้า', icon: Package },
+    { id: 'master', label: 'sidebar.group.master', items: [
+      { href: '/dashboard/admin/customers', label: 'sidebar.manage_customers', icon: UserPlus },
+      { href: '/dashboard/admin/products', label: 'sidebar.manage_products', icon: Package },
     ]},
-    { id: 'org', label: 'องค์กร', items: [
-      { href: '/dashboard/admin/users', label: 'จัดการผู้ใช้', icon: Users },
-      { href: '/dashboard/admin/teams', label: 'จัดการทีม', icon: UsersRound },
-      { href: '/dashboard/admin/zones', label: 'เขตการขาย', icon: MapPin },
+    { id: 'org', label: 'sidebar.group.org', items: [
+      { href: '/dashboard/admin/users', label: 'sidebar.manage_users', icon: Users },
+      { href: '/dashboard/admin/teams', label: 'sidebar.manage_teams', icon: UsersRound },
+      { href: '/dashboard/admin/zones', label: 'sidebar.zones', icon: MapPin },
     ]},
-    { id: 'system', label: 'ระบบ', items: [
-      { href: '/dashboard/admin/activity-logs', label: 'บันทึกการใช้งาน', icon: Activity },
+    { id: 'system', label: 'sidebar.group.system', items: [
+      { href: '/dashboard/admin/activity-logs', label: 'sidebar.activity_logs', icon: Activity },
     ]},
   ],
   manager: [
-    { id: 'main', label: 'หลัก', items: [
-      { href: '/dashboard/manager', label: 'แดชบอร์ด', icon: LayoutDashboard },
-      { href: '/dashboard/manager/reports', label: 'รายงานทีม', icon: FileBarChart },
+    { id: 'main', label: 'sidebar.group.main', items: [
+      { href: '/dashboard/manager', label: 'sidebar.dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/manager/reports', label: 'sidebar.reports_team', icon: FileBarChart },
     ]},
-    { id: 'pending', label: 'รออนุมัติ', items: [
-      { href: '/dashboard/manager/quotations-pending', label: 'ใบเสนอราคารออนุมัติ', icon: FileText },
-      { href: '/dashboard/manager/orders-pending', label: 'คำสั่งซื้อรอตรวจสอบ', icon: ShoppingCart },
+    { id: 'pending', label: 'sidebar.group.pending', items: [
+      { href: '/dashboard/manager/quotations-pending', label: 'sidebar.quotations_pending', icon: FileText },
+      { href: '/dashboard/manager/orders-pending', label: 'sidebar.orders_pending', icon: ShoppingCart },
     ]},
-    { id: 'create', label: 'สร้างเอกสาร', items: [
-      { href: '/dashboard/manager/create-quotation', label: 'สร้างใบเสนอราคา', icon: FilePlus },
-      { href: '/dashboard/manager/create-order', label: 'สร้างคำสั่งซื้อ', icon: Plus },
-      { href: '/dashboard/manager/request-customer', label: 'ขอเพิ่มลูกค้า', icon: ClipboardList },
+    { id: 'create', label: 'sidebar.group.create', items: [
+      { href: '/dashboard/manager/create-quotation', label: 'sidebar.create_quotation', icon: FilePlus },
+      { href: '/dashboard/manager/create-order', label: 'sidebar.create_order', icon: Plus },
+      { href: '/dashboard/manager/request-customer', label: 'sidebar.request_customer', icon: ClipboardList },
     ]},
-    { id: 'docs', label: 'เอกสาร', items: [
-      { href: '/dashboard/manager/my-documents', label: 'เอกสารของฉัน', icon: FolderOpen },
-      { href: '/dashboard/manager/team-documents', label: 'เอกสารทีม', icon: FolderOpen },
+    { id: 'docs', label: 'sidebar.group.docs', items: [
+      { href: '/dashboard/manager/my-documents', label: 'sidebar.my_documents', icon: FolderOpen },
+      { href: '/dashboard/manager/team-documents', label: 'sidebar.team_documents', icon: FolderOpen },
     ]},
-    { id: 'master', label: 'ข้อมูลหลัก', items: [
-      { href: '/dashboard/manager/customers', label: 'ข้อมูลลูกค้า', icon: UserPlus },
-      { href: '/dashboard/manager/products', label: 'ข้อมูลสินค้า', icon: Package },
+    { id: 'master', label: 'sidebar.group.master', items: [
+      { href: '/dashboard/manager/customers', label: 'sidebar.info_customers', icon: UserPlus },
+      { href: '/dashboard/manager/products', label: 'sidebar.info_products', icon: Package },
     ]},
-    { id: 'team', label: 'ทีม', items: [
-      { href: '/dashboard/manager/team-members', label: 'สมาชิกทีม', icon: UsersRound },
-      { href: '/dashboard/manager/zones', label: 'เขตการขาย', icon: MapPin },
+    { id: 'team', label: 'sidebar.group.team', items: [
+      { href: '/dashboard/manager/team-members', label: 'sidebar.team_members', icon: UsersRound },
+      { href: '/dashboard/manager/zones', label: 'sidebar.zones', icon: MapPin },
     ]},
   ],
   sales: [
-    { id: 'docs', label: 'เอกสาร', items: [
-      { href: '/dashboard/sales', label: 'เอกสารของฉัน', icon: FolderOpen },
+    { id: 'docs', label: 'sidebar.group.docs', items: [
+      { href: '/dashboard/sales', label: 'sidebar.my_documents', icon: FolderOpen },
     ]},
-    { id: 'create', label: 'สร้างเอกสาร', items: [
-      { href: '/dashboard/sales/create-quotation', label: 'สร้างใบเสนอราคา', icon: FilePlus },
-      { href: '/dashboard/sales/create-order', label: 'สร้างคำสั่งซื้อ', icon: Plus },
-      { href: '/dashboard/sales/request-customer', label: 'ขอเพิ่มลูกค้า', icon: ClipboardList },
+    { id: 'create', label: 'sidebar.group.create', items: [
+      { href: '/dashboard/sales/create-quotation', label: 'sidebar.create_quotation', icon: FilePlus },
+      { href: '/dashboard/sales/create-order', label: 'sidebar.create_order', icon: Plus },
+      { href: '/dashboard/sales/request-customer', label: 'sidebar.request_customer', icon: ClipboardList },
     ]},
-    { id: 'master', label: 'ข้อมูลหลัก', items: [
-      { href: '/dashboard/sales/customers', label: 'ข้อมูลลูกค้า', icon: UserPlus },
-      { href: '/dashboard/sales/products', label: 'ข้อมูลสินค้า', icon: Package },
+    { id: 'master', label: 'sidebar.group.master', items: [
+      { href: '/dashboard/sales/customers', label: 'sidebar.info_customers', icon: UserPlus },
+      { href: '/dashboard/sales/products', label: 'sidebar.info_products', icon: Package },
     ]},
   ],
   cfo: [
-    { id: 'main', label: 'หลัก', items: [
-      { href: '/dashboard/cfo', label: 'แดชบอร์ด', icon: LayoutDashboard },
-      { href: '/dashboard/cfo/reports', label: 'รายงาน', icon: FileBarChart },
+    { id: 'main', label: 'sidebar.group.main', items: [
+      { href: '/dashboard/cfo', label: 'sidebar.dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/cfo/reports', label: 'sidebar.reports', icon: FileBarChart },
     ]},
-    { id: 'master', label: 'ข้อมูลทั้งหมด', items: [
-      { href: '/dashboard/cfo/customers', label: 'ลูกค้าทั้งหมด', icon: UserPlus },
-      { href: '/dashboard/cfo/products', label: 'สินค้าทั้งหมด', icon: Package },
-      { href: '/dashboard/cfo/users', label: 'ผู้ใช้ทั้งหมด', icon: Users },
-      { href: '/dashboard/cfo/teams', label: 'ทีมทั้งหมด', icon: UsersRound },
+    { id: 'master', label: 'sidebar.group.all_data', items: [
+      { href: '/dashboard/cfo/customers', label: 'sidebar.all_customers', icon: UserPlus },
+      { href: '/dashboard/cfo/products', label: 'sidebar.all_products', icon: Package },
+      { href: '/dashboard/cfo/users', label: 'sidebar.all_users', icon: Users },
+      { href: '/dashboard/cfo/teams', label: 'sidebar.all_teams', icon: UsersRound },
     ]},
   ],
 }
 
 const GROUP_STATE_KEY = 'zuugroup_sidebar_groups'
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการทีม', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร',
-}
-
-export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props) {
+export default function Sidebar({ role, mobileOpen, onMobileClose }: Props) {
   const { sidebarCollapsed: collapsed } = useUI()
+  const { t } = useLanguage()
   const pathname = usePathname()
-  const router = useRouter()
   const groups = NAV[role] ?? []
   const [badges, setBadges] = useState<Record<string, number>>({})
   const [seen, setSeen] = useState<Record<string, number>>({})
@@ -190,11 +186,6 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
   // Close mobile drawer on route change
   useEffect(() => { onMobileClose() }, [pathname]) // eslint-disable-line
 
-  const handleLogout = async () => {
-    await logout()
-    router.push('/auth/login')
-  }
-
   return (
     <>
       {/* Mobile backdrop */}
@@ -227,14 +218,14 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
                 <img src="/images/logo.png" alt="ZUUGROUP" className="w-9 h-9 object-contain shrink-0" />
                 <div className="min-w-0">
                   <h1 className="text-base font-bold text-[#2563EB] leading-tight">ZUUGROUP</h1>
-                  <p className="text-xs text-gray-500 truncate">{ROLE_LABELS[role]}</p>
+                  <p className="text-xs text-gray-500 truncate">{t(`role.${role}`)}</p>
                 </div>
               </div>
               {/* Mobile close — keep only on mobile drawer */}
               <button
                 onClick={onMobileClose}
                 className="lg:hidden p-1.5 hover:bg-gray-100 rounded-lg shrink-0 text-gray-500"
-                aria-label="ปิดเมนู"
+                aria-label={t('sidebar.close_menu')}
               >
                 <X size={18} />
               </button>
@@ -260,7 +251,7 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
                     className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition"
                   >
                     {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    <span className="flex-1 text-left">{group.label}</span>
+                    <span className="flex-1 text-left">{t(group.label)}</span>
                     {!isOpen && groupUnseenCount > 0 && (
                       <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded-full">
                         {groupUnseenCount > 9 ? '9+' : groupUnseenCount}
@@ -285,7 +276,7 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
                               ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 font-medium shadow-sm'
                               : 'text-gray-600 hover:bg-gray-50'
                           }`}
-                          title={collapsed ? `${item.label}${hasDot ? ` (${count} ใหม่)` : ''}` : undefined}
+                          title={collapsed ? `${t(item.label)}${hasDot ? ` (${count} ${t('sidebar.new_count')})` : ''}` : undefined}
                         >
                           {active && !collapsed && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-blue-600 rounded-r" />}
                           <span className="relative shrink-0 inline-flex">
@@ -297,7 +288,7 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
                             )}
                           </span>
                           {!collapsed && (
-                            <span className="flex-1 truncate">{item.label}</span>
+                            <span className="flex-1 truncate">{t(item.label)}</span>
                           )}
                         </Link>
                       )
@@ -309,31 +300,6 @@ export default function Sidebar({ role, user, mobileOpen, onMobileClose }: Props
           })}
         </nav>
 
-        {/* User */}
-        <div className="p-3 border-t border-gray-100">
-          {!collapsed && (
-            <div className="flex items-center gap-3 mb-2 px-2 py-2">
-              <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
-                {user.first_name?.[0]}{user.last_name?.[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user.first_name} {user.last_name}</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                {(role === 'sales' || role === 'manager') && user.team?.name && (
-                  <p className="text-[10px] text-blue-600 font-medium truncate mt-0.5">ทีม: {user.team.name}</p>
-                )}
-              </div>
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition"
-            title="ออกจากระบบ"
-          >
-            <LogOut size={18} className="shrink-0" />
-            {!collapsed && <span>ออกจากระบบ</span>}
-          </button>
-        </div>
       </aside>
     </>
   )

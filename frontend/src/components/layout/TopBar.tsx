@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Search, Menu, PanelLeftClose, PanelLeftOpen, ExternalLink } from 'lucide-react'
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, ExternalLink, LogOut, Globe } from 'lucide-react'
 import { notificationsApi } from '@/lib/api/services'
-import { currentUser } from '@/lib/api/auth'
+import { currentUser, logout } from '@/lib/api/auth'
 import { useUI } from '@/lib/ui-context'
+import { useLanguage } from '@/contexts/LanguageContext'
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการทีม', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร',
+}
+
+const LANG_LABELS: Record<string, string> = { th: 'ไทย', en: 'English' }
 
 interface Props { title: string }
 
@@ -56,14 +63,22 @@ export default function TopBar({ title }: Props) {
   const router = useRouter()
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotif, setShowNotif] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
+  const [showUser, setShowUser] = useState(false)
   const [role, setRole] = useState<string | undefined>(undefined)
+  const [user, setUser] = useState<any>(null)
   const { openMobileSidebar, sidebarCollapsed, toggleSidebar } = useUI()
+  const { lang, setLang } = useLanguage()
 
   useEffect(() => {
     const u = currentUser()
+    if (u) setUser(u)
     if (u?.role) setRole(u.role)
   }, [])
+
+  const handleLogout = async () => {
+    await logout()
+    router.push('/auth/login')
+  }
 
   const loadNotifications = async () => {
     try { setNotifications(await notificationsApi.list()) } catch { /* ignore */ }
@@ -130,14 +145,6 @@ export default function TopBar({ title }: Props) {
       <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate flex-1 lg:flex-initial">{title}</h2>
 
       <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-        <button
-          onClick={() => setShowSearch(!showSearch)}
-          className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-          aria-label="ค้นหา"
-        >
-          <Search size={18} className="text-gray-600" />
-        </button>
-
         <div className="relative">
           <button
             onClick={() => setShowNotif(!showNotif)}
@@ -153,6 +160,8 @@ export default function TopBar({ title }: Props) {
           </button>
 
           {showNotif && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNotif(false)} />
             <div className="absolute right-0 top-12 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
               <div className="p-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 text-sm">การแจ้งเตือน</h3>
@@ -197,23 +206,77 @@ export default function TopBar({ title }: Props) {
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
+
+        <button
+          onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition text-gray-600"
+          aria-label="เปลี่ยนภาษา"
+          title="เปลี่ยนภาษา"
+        >
+          <Globe size={18} />
+          <span className="hidden sm:inline text-xs font-medium">{LANG_LABELS[lang]}</span>
+        </button>
+
+        {user && (
+          <div className="relative">
+            <button
+              onClick={() => setShowUser(!showUser)}
+              className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+              aria-label="เมนูผู้ใช้"
+            >
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
+                {user.first_name?.[0]}{user.last_name?.[0]}
+              </div>
+              <div className="hidden sm:flex flex-col items-start leading-tight min-w-0">
+                <span className="text-xs font-medium text-gray-900 truncate max-w-[140px]">
+                  {user.first_name} {user.last_name}
+                </span>
+                <span className="text-[10px] text-gray-500 truncate max-w-[140px]">{user.email}</span>
+              </div>
+            </button>
+
+            {showUser && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowUser(false)} />
+                <div className="absolute right-0 top-12 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
+                      {user.first_name?.[0]}{user.last_name?.[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {user.first_name} {user.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      {role && (
+                        <p className="text-[10px] text-blue-600 font-medium mt-0.5">
+                          {ROLE_LABELS[role] ?? role}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {(role === 'sales' || role === 'manager') && user.team?.name && (
+                    <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-600">
+                      ทีม: <span className="font-medium text-gray-900">{user.team.name}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition"
+                  >
+                    <LogOut size={16} />
+                    ออกจากระบบ
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Mobile search row */}
-      {showSearch && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 p-3 z-30">
-          <div className="relative w-full sm:w-auto">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              autoFocus
-              placeholder="ค้นหา..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
