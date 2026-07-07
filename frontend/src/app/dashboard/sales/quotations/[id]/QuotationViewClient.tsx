@@ -5,19 +5,20 @@ import { ArrowLeft, Download, Edit2, ShoppingCart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { generateQuotationPdf, buildQuotationHtml, type DocData } from '@/lib/pdf/documentPdf'
 import PdfPreviewModal from '@/components/shared/PdfPreviewModal'
-
-const STATUS: Record<string, { label: string; color: string }> = {
-  draft: { label: 'ฉบับร่าง', color: 'bg-gray-100 text-gray-700' },
-  pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'อนุมัติ', color: 'bg-green-100 text-green-700' },
-  ordered: { label: 'ออกคำสั่งซื้อแล้ว', color: 'bg-purple-100 text-purple-700' },
-  rejected: { label: 'ไม่อนุมัติ', color: 'bg-red-100 text-red-700' },
-}
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props { quotation: any }
 
 export default function QuotationViewClient({ quotation }: Props) {
   const router = useRouter()
+  const { t, lang } = useLanguage()
+  const STATUS: Record<string, { label: string; color: string }> = {
+    draft: { label: t('doc.status.draft'), color: 'bg-gray-100 text-gray-700' },
+    pending: { label: t('doc.status.pending'), color: 'bg-yellow-100 text-yellow-700' },
+    approved: { label: t('doc.status.approved'), color: 'bg-green-100 text-green-700' },
+    ordered: { label: t('doc.status.ordered'), color: 'bg-purple-100 text-purple-700' },
+    rejected: { label: t('doc.status.rejected_q'), color: 'bg-red-100 text-red-700' },
+  }
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const s = STATUS[quotation.status] ?? { label: quotation.status, color: 'bg-gray-100' }
 
@@ -68,29 +69,29 @@ export default function QuotationViewClient({ quotation }: Props) {
                 if (typeof window !== 'undefined' && window.history.length > 1) router.back()
                 else router.push('/dashboard/sales')
               }}
-              title="ย้อนกลับ"
+              title={t('doc.back')}
               className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={18} /></button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-gray-900">ใบเสนอราคา {quotation.quotation_number}</h1>
+                <h1 className="font-bold text-gray-900">{t('doc.quotation')} {quotation.quotation_number}</h1>
                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${s.color}`}>{s.label}</span>
               </div>
-              <p className="text-sm text-gray-500">โดย: {quotation.creator?.first_name} {quotation.creator?.last_name}</p>
+              <p className="text-sm text-gray-500">{t('doc.by')}: {quotation.creator?.first_name} {quotation.creator?.last_name}</p>
             </div>
           </div>
           <div className="flex gap-2">
             {quotation.status === 'draft' && (
               <button onClick={() => router.push(`/dashboard/sales/quotations/${quotation.id}/edit`)} className="flex items-center gap-2 border border-blue-200 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium">
-                <Edit2 size={15} /> แก้ไข
+                <Edit2 size={15} /> {t('doc.edit')}
               </button>
             )}
             {quotation.status === 'approved' && (
               <button onClick={() => router.push(`/dashboard/sales/create-order?fromQuotation=${quotation.id}`)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                <ShoppingCart size={15} /> แปลงเป็นคำสั่งซื้อ
+                <ShoppingCart size={15} /> {t('doc.convert_to_order')}
               </button>
             )}
             <button onClick={download} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-              <Download size={15} /> ดาวน์โหลด PDF
+              <Download size={15} /> {t('doc.download_pdf')}
             </button>
           </div>
         </div>
@@ -98,26 +99,26 @@ export default function QuotationViewClient({ quotation }: Props) {
 
       <div className="max-w-4xl mx-auto p-6 space-y-5">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-3">ลูกค้า</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('doc.customer')}</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><span className="text-gray-500">ชื่อบริษัท:</span> {quotation.customer?.company_name}</div>
-            <div><span className="text-gray-500">ผู้ติดต่อ:</span> {quotation.customer?.contact_name ?? '-'}</div>
-            <div><span className="text-gray-500">เบอร์:</span> {quotation.customer?.phone ?? '-'}</div>
-            <div><span className="text-gray-500">อีเมล:</span> {quotation.customer?.email ?? '-'}</div>
-            <div className="col-span-2"><span className="text-gray-500">ที่อยู่:</span> {quotation.customer?.address ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.company_name')}</span> {quotation.customer?.company_name}</div>
+            <div><span className="text-gray-500">{t('doc.contact_name')}</span> {quotation.customer?.contact_name ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.phone_label')}</span> {quotation.customer?.phone ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.email_label')}</span> {quotation.customer?.email ?? '-'}</div>
+            <div className="col-span-2"><span className="text-gray-500">{t('doc.address_label')}</span> {quotation.customer?.address ?? '-'}</div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <h3 className="font-semibold text-gray-900 p-5 border-b border-gray-100">รายการสินค้า</h3>
+          <h3 className="font-semibold text-gray-900 p-5 border-b border-gray-100">{t('doc.items_title')}</h3>
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-12">#</th>
-                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">สินค้า</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">จำนวน</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">ราคา</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">รวม</th>
+                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.product')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.qty')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.unit_price_short')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.total')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -134,10 +135,10 @@ export default function QuotationViewClient({ quotation }: Props) {
           </table></div>
           <div className="p-5 border-t border-gray-100 bg-gray-50">
             <div className="ml-auto max-w-xs space-y-1.5 text-sm">
-              <div className="flex justify-between text-gray-600"><span>ยอดรวม:</span><span>฿{quotation.subtotal?.toLocaleString()}</span></div>
-              <div className="flex justify-between text-gray-600"><span>VAT ({quotation.vat_percent}%):</span><span>฿{quotation.vat_amount?.toLocaleString()}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{t('doc.subtotal_total')}</span><span>฿{quotation.subtotal?.toLocaleString()}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{t('doc.vat_line').replace('{pct}', String(quotation.vat_percent))}</span><span>฿{quotation.vat_amount?.toLocaleString()}</span></div>
               <div className="flex justify-between font-bold text-base text-gray-900 pt-1.5 border-t border-gray-200">
-                <span>ยอดสุทธิ:</span><span>฿{quotation.total_amount?.toLocaleString()}</span>
+                <span>{t('doc.grand_total')}</span><span>฿{quotation.total_amount?.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -145,15 +146,15 @@ export default function QuotationViewClient({ quotation }: Props) {
 
         {quotation.reject_reason && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
-            <p className="font-semibold text-red-700">เหตุผลที่ไม่อนุมัติ</p>
+            <p className="font-semibold text-red-700">{t('doc.reject_reason_label_deny')}</p>
             <p className="text-red-700 mt-1">{quotation.reject_reason}</p>
           </div>
         )}
 
         {(quotation.notes || quotation.contract_period_days) && (
           <div className="bg-white rounded-xl border border-gray-100 p-5 text-sm">
-            {quotation.contract_period_days && <p className="mb-2"><span className="text-gray-500">ระยะเวลาสัญญา:</span> {quotation.contract_period_days} วัน</p>}
-            {quotation.notes && <p><span className="text-gray-500">หมายเหตุ:</span> {quotation.notes}</p>}
+            {quotation.contract_period_days && <p className="mb-2"><span className="text-gray-500">{t('doc.contract_period')}</span> {quotation.contract_period_days} {t('doc.contract_period_days')}</p>}
+            {quotation.notes && <p><span className="text-gray-500">{t('doc.notes_label')}</span> {quotation.notes}</p>}
           </div>
         )}
       </div>
@@ -161,7 +162,7 @@ export default function QuotationViewClient({ quotation }: Props) {
       <PdfPreviewModal
         html={previewHtml}
         filename={`${quotation.quotation_number}.pdf`}
-        title={`ใบเสนอราคา ${quotation.quotation_number}`}
+        title={`${t('doc.quotation')} ${quotation.quotation_number}`}
         onClose={() => setPreviewHtml(null)}
         generatePdf={() => generateQuotationPdf(buildData())}
       />

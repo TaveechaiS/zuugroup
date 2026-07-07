@@ -5,19 +5,20 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Download } from 'lucide-react'
 import { generateOrderPdf, buildOrderHtml, type DocData } from '@/lib/pdf/documentPdf'
 import PdfPreviewModal from '@/components/shared/PdfPreviewModal'
-
-const STATUS: Record<string, { label: string; color: string }> = {
-  pending_review: { label: 'รอตรวจสอบ', color: 'bg-yellow-100 text-yellow-700' },
-  processing: { label: 'รอยืนยันการขาย', color: 'bg-blue-100 text-blue-700' },
-  completed: { label: 'สำเร็จ', color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'ยกเลิก', color: 'bg-gray-100 text-gray-700' },
-  rejected: { label: 'ไม่ผ่าน', color: 'bg-red-100 text-red-700' },
-}
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props { order: any }
 
 export default function OrderViewClient({ order }: Props) {
   const router = useRouter()
+  const { t, lang } = useLanguage()
+  const STATUS: Record<string, { label: string; color: string }> = {
+    pending_review: { label: t('doc.status.pending_review'), color: 'bg-yellow-100 text-yellow-700' },
+    processing: { label: t('doc.status.processing'), color: 'bg-blue-100 text-blue-700' },
+    completed: { label: t('doc.status.completed'), color: 'bg-green-100 text-green-700' },
+    cancelled: { label: t('doc.status.cancelled'), color: 'bg-gray-100 text-gray-700' },
+    rejected: { label: t('doc.status.rejected'), color: 'bg-red-100 text-red-700' },
+  }
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const s = STATUS[order.status] ?? { label: order.status, color: 'bg-gray-100' }
 
@@ -67,44 +68,44 @@ export default function OrderViewClient({ order }: Props) {
                 if (typeof window !== 'undefined' && window.history.length > 1) router.back()
                 else router.push('/dashboard/sales')
               }}
-              title="ย้อนกลับ"
+              title={t('doc.back')}
               className="p-2 hover:bg-gray-100 rounded-lg"><ArrowLeft size={18} /></button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-bold text-gray-900">คำสั่งซื้อ {order.order_number}</h1>
+                <h1 className="font-bold text-gray-900">{t('doc.order')} {order.order_number}</h1>
                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${s.color}`}>{s.label}</span>
               </div>
-              <p className="text-sm text-gray-500">โดย: {order.creator?.first_name} {order.creator?.last_name}</p>
+              <p className="text-sm text-gray-500">{t('doc.by')}: {order.creator?.first_name} {order.creator?.last_name}</p>
             </div>
           </div>
           <button onClick={download} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-            <Download size={15} /> ดาวน์โหลด PDF
+            <Download size={15} /> {t('doc.download_pdf')}
           </button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-6 space-y-5">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-3">ลูกค้า</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('doc.customer')}</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><span className="text-gray-500">ชื่อบริษัท:</span> {order.customer?.company_name}</div>
-            <div><span className="text-gray-500">ผู้ติดต่อ:</span> {order.customer?.contact_name ?? '-'}</div>
-            <div><span className="text-gray-500">เบอร์:</span> {order.customer?.phone ?? '-'}</div>
-            <div><span className="text-gray-500">อีเมล:</span> {order.customer?.email ?? '-'}</div>
-            <div className="col-span-2"><span className="text-gray-500">ที่อยู่:</span> {order.customer?.address ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.company_name')}</span> {order.customer?.company_name}</div>
+            <div><span className="text-gray-500">{t('doc.contact_name')}</span> {order.customer?.contact_name ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.phone_label')}</span> {order.customer?.phone ?? '-'}</div>
+            <div><span className="text-gray-500">{t('doc.email_label')}</span> {order.customer?.email ?? '-'}</div>
+            <div className="col-span-2"><span className="text-gray-500">{t('doc.address_label')}</span> {order.customer?.address ?? '-'}</div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <h3 className="font-semibold text-gray-900 p-5 border-b border-gray-100">รายการสินค้า</h3>
+          <h3 className="font-semibold text-gray-900 p-5 border-b border-gray-100">{t('doc.items_title')}</h3>
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 w-12">#</th>
-                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">สินค้า</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">จำนวน</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">ราคา</th>
-                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">รวม</th>
+                <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.product')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.qty')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.unit_price_short')}</th>
+                <th className="text-right px-5 py-2.5 text-xs font-medium text-gray-500">{t('doc.col.total')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -122,13 +123,13 @@ export default function OrderViewClient({ order }: Props) {
           <div className="p-5 border-t border-gray-100 bg-gray-50">
             <div className="ml-auto max-w-xs space-y-1.5 text-sm">
               {order.subtotal !== undefined && order.subtotal > 0 && (
-                <div className="flex justify-between text-gray-600"><span>ยอดก่อน VAT:</span><span>฿{order.subtotal?.toLocaleString()}</span></div>
+                <div className="flex justify-between text-gray-600"><span>{t('doc.subtotal_before_vat')}</span><span>฿{order.subtotal?.toLocaleString()}</span></div>
               )}
               {order.vat_amount !== undefined && order.vat_amount > 0 && (
-                <div className="flex justify-between text-gray-600"><span>VAT ({order.vat_percent ?? 7}%):</span><span>฿{order.vat_amount?.toLocaleString()}</span></div>
+                <div className="flex justify-between text-gray-600"><span>{t('doc.vat_line').replace('{pct}', String(order.vat_percent ?? 7))}</span><span>฿{order.vat_amount?.toLocaleString()}</span></div>
               )}
               <div className="flex justify-between font-bold text-base text-gray-900 pt-1.5 border-t border-gray-200">
-                <span>ยอดสุทธิ:</span><span>฿{order.total_amount?.toLocaleString()}</span>
+                <span>{t('doc.grand_total')}</span><span>฿{order.total_amount?.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -136,7 +137,7 @@ export default function OrderViewClient({ order }: Props) {
 
         {order.reject_reason && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm">
-            <p className="font-semibold text-red-700">เหตุผล</p>
+            <p className="font-semibold text-red-700">{t('doc.reject_reason_order')}</p>
             <p className="text-red-700 mt-1">{order.reject_reason}</p>
           </div>
         )}
@@ -145,7 +146,7 @@ export default function OrderViewClient({ order }: Props) {
       <PdfPreviewModal
         html={previewHtml}
         filename={`${order.order_number}.pdf`}
-        title={`คำสั่งซื้อ ${order.order_number}`}
+        title={`${t('doc.order')} ${order.order_number}`}
         onClose={() => setPreviewHtml(null)}
         generatePdf={() => generateOrderPdf(buildData())}
       />

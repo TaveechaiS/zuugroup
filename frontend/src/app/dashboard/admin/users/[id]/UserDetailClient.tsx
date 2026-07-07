@@ -1,8 +1,10 @@
 'use client'
 
-const ROLE_LABELS: Record<string, string> = { admin: 'ผู้ดูแล', manager: 'ผู้จัดการ', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร' }
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function UserDetailClient({ user }: { user: any }) {
+  const { t, lang } = useLanguage()
+  const ROLE_LABELS: Record<string, string> = { admin: t('role.short.admin'), manager: t('role.short.manager'), sales: t('role.short.sales'), cfo: t('role.short.cfo') }
   return (
     <div className="p-4 sm:p-6">
       <div className="max-w-3xl mx-auto bg-white rounded-xl border border-gray-100 p-6 space-y-4">
@@ -17,10 +19,10 @@ export default function UserDetailClient({ user }: { user: any }) {
           </div>
         </div>
         <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div><dt className="text-gray-500 text-xs">เบอร์โทรศัพท์</dt><dd className="text-gray-900 mt-0.5">{user.phone ?? '-'}</dd></div>
-          <div><dt className="text-gray-500 text-xs">ทีม</dt><dd className="text-gray-900 mt-0.5">{user.team?.name ?? '-'}</dd></div>
-          <div><dt className="text-gray-500 text-xs">สถานะ</dt><dd className="text-gray-900 mt-0.5">{user.is_active ? 'ใช้งาน' : 'ปิด'}</dd></div>
-          <div><dt className="text-gray-500 text-xs">วันที่สร้างบัญชี</dt><dd className="text-gray-900 mt-0.5">{new Date(user.created_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd></div>
+          <div><dt className="text-gray-500 text-xs">{t('users.detail.phone')}</dt><dd className="text-gray-900 mt-0.5">{user.phone ?? '-'}</dd></div>
+          <div><dt className="text-gray-500 text-xs">{t('users.detail.team')}</dt><dd className="text-gray-900 mt-0.5">{user.team?.name ?? '-'}</dd></div>
+          <div><dt className="text-gray-500 text-xs">{t('users.detail.status')}</dt><dd className="text-gray-900 mt-0.5">{user.is_active ? t('users.status.active') : t('users.status.inactive')}</dd></div>
+          <div><dt className="text-gray-500 text-xs">{t('users.detail.created_at')}</dt><dd className="text-gray-900 mt-0.5">{new Date(user.created_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</dd></div>
         </dl>
       </div>
     </div>

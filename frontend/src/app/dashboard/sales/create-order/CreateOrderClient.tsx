@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, FileText } from 'lucide-react'
 import { ordersApi, customersApi } from '@/lib/api/services'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface PrefillItem { product_id: string; quantity: number; unit_price: number; product_name?: string }
 interface Prefill {
@@ -17,6 +18,7 @@ interface OrderItem { product_id: string; quantity: number; unit_price: number }
 
 export default function CreateOrderClient({ customers, products, prefill }: Props) {
   const router = useRouter()
+  const { t } = useLanguage()
   const sourceQuotationId = prefill?.sourceQuotationId
   const [customerId, setCustomerId] = useState(prefill?.customerId ?? '')
   const [items, setItems] = useState<OrderItem[]>(
@@ -37,8 +39,6 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
 
   const selectedCustomer = customers.find((c) => c.id === customerId)
 
-  // Group the product picker: products from the source quotation appear first,
-  // the rest under "สินค้าอื่น ๆ". Only when this order is built from a quotation.
   const quotedProductIds = useMemo(
     () => new Set((prefill?.items ?? []).map((i) => i.product_id)),
     [prefill],
@@ -52,7 +52,7 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
   }, [products, prefill, quotedProductIds])
 
   const productOption = (p: any) => (
-    <option key={p.id} value={p.id}>{p.name} (คงเหลือ: {p.quantity} {p.unit ?? ''})</option>
+    <option key={p.id} value={p.id}>{p.name} ({t('doc.stock_remaining')} {p.quantity} {p.unit ?? ''})</option>
   )
 
   useEffect(() => {
@@ -77,10 +77,9 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
     const newItems = [...items]
     newItems[idx] = { ...newItems[idx], [field]: value }
     if (field === 'product_id') {
-      // Guard against picking the same product as another row
       const dup = newItems.findIndex((it, i) => i !== idx && it.product_id === value && value)
       if (dup !== -1) {
-        alert('สินค้านี้ถูกเพิ่มในรายการแล้ว — กรุณาเพิ่มจำนวนในแถวเดิมแทน')
+        alert(t('doc.duplicate_product'))
         return
       }
       const product = products.find((p) => p.id === value)
@@ -89,7 +88,6 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
     setItems(newItems)
   }
 
-  // Check insufficient stock per item
   const insufficientItems = items
     .map((it, idx) => {
       const p = products.find((pp) => pp.id === it.product_id)
@@ -102,11 +100,11 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
 
   const handleSubmit = async (asDraft: boolean = false) => {
     setError('')
-    if (!customerId) { setError('กรุณาเลือกลูกค้า'); return }
-    if (items.length === 0) { setError('กรุณาเพิ่มสินค้าอย่างน้อย 1 รายการ'); return }
-    if (items.some((i) => !i.product_id)) { setError('กรุณาเลือกสินค้าให้ครบทุกรายการ'); return }
+    if (!customerId) { setError(t('doc.select_customer_err')); return }
+    if (items.length === 0) { setError(t('doc.select_item_err')); return }
+    if (items.some((i) => !i.product_id)) { setError(t('doc.select_product_err')); return }
     if (!asDraft && hasInsufficient) {
-      setError('จำนวนสินค้าไม่เพียงพอ — ปรับจำนวนสินค้าใหม่ หรือกด "บันทึกฉบับร่าง"')
+      setError(t('doc.insufficient_submit_err'))
       return
     }
 
@@ -129,7 +127,7 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
       router.push('/dashboard/sales')
       router.refresh()
     } catch (err: any) {
-      setError(err.message || 'บันทึกไม่สำเร็จ')
+      setError(err.message || t('doc.save_failed'))
     } finally {
       setSaving(false)
     }
@@ -145,14 +143,14 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
             <div className="flex items-center gap-2 mb-1.5">
               <FileText size={16} className="text-indigo-600 shrink-0" />
               <p className="text-sm font-semibold text-indigo-900">
-                สินค้าจากใบเสนอราคา{prefill.quotationNumber ? ` ${prefill.quotationNumber}` : ''}
+                {t('doc.from_quotation_title').replace('{number}', prefill.quotationNumber ? ` ${prefill.quotationNumber}` : '')}
               </p>
             </div>
             <p className="text-xs text-indigo-700 mb-2">
-              รายการด้านล่างถูกเติมจากใบเสนอราคาที่อนุมัติแล้ว — ปรับแก้จำนวน เพิ่ม หรือลบได้ก่อนส่งคำสั่งซื้อ
+              {t('doc.from_quotation_hint')}
             </p>
             <p className="text-xs text-indigo-800 bg-indigo-100 rounded-md px-2.5 py-1.5 mb-3">
-              ℹ️ คำสั่งซื้อนี้แปลงจากใบเสนอราคาที่อนุมัติแล้ว จะ<span className="font-semibold">ข้ามขั้นตรวจสอบ</span> ส่งไปยัง<span className="font-semibold">ขั้นยืนยันการขาย</span>โดยตรง
+              {t('doc.from_quotation_skip')}
             </p>
             <div className="space-y-1 bg-white/60 rounded-lg p-3">
               {prefill.items.map((it, i) => (
@@ -166,23 +164,23 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
         )}
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">ข้อมูลคำสั่งซื้อ</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('doc.order_info')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">ลูกค้า *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('doc.customer_required')}</label>
               <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">-- เลือกลูกค้า --</option>
+                <option value="">{t('doc.select_customer')}</option>
                 {customers.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
               </select>
               {customerId && Object.keys(customerPrices).length > 0 && (
                 <p className="text-xs text-blue-600 mt-1.5">
-                  ✓ ลูกค้ารายนี้มีราคาตกลงพิเศษ {Object.keys(customerPrices).length} รายการ
+                  {t('doc.custom_price_note').replace('{count}', String(Object.keys(customerPrices).length))}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">วันที่</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('doc.date_label')}</label>
               <input type="date" defaultValue={new Date().toISOString().split('T')[0]}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -191,15 +189,15 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">รายการสินค้า</h3>
+            <h3 className="font-semibold text-gray-900">{t('doc.items_title')}</h3>
             <button onClick={addItem} disabled={!customerId}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition">
-              <Plus size={14} /> เพิ่มสินค้า
+              <Plus size={14} /> {t('doc.add_product')}
             </button>
           </div>
 
           <div className="space-y-3">
-            {!customerId && <p className="text-center text-gray-400 text-sm py-6">กรุณาเลือกลูกค้าก่อนเพิ่มสินค้า</p>}
+            {!customerId && <p className="text-center text-gray-400 text-sm py-6">{t('doc.select_customer_first')}</p>}
             {items.map((item, idx) => {
               const product = products.find((p) => p.id === item.product_id)
               const hasCustomPrice = item.product_id && customerPrices[item.product_id] !== undefined
@@ -209,11 +207,11 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
                   <div className="grid grid-cols-12 gap-2 items-center">
                     <select value={item.product_id} onChange={(e) => updateItem(idx, 'product_id', e.target.value)}
                       className="col-span-5 px-2 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                      <option value="">-- เลือกสินค้า --</option>
+                      <option value="">{t('doc.select_product')}</option>
                       {groupedProducts ? (
                         <>
-                          <optgroup label="สินค้าจากใบเสนอราคา">{groupedProducts.quoted.map(productOption)}</optgroup>
-                          <optgroup label="สินค้าอื่น ๆ">{groupedProducts.others.map(productOption)}</optgroup>
+                          <optgroup label={t('doc.products_from_quote')}>{groupedProducts.quoted.map(productOption)}</optgroup>
+                          <optgroup label={t('doc.products_others')}>{groupedProducts.others.map(productOption)}</optgroup>
                         </>
                       ) : (
                         products.map(productOption)
@@ -222,7 +220,7 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
                     <input type="number" min="1" value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', Number(e.target.value))}
                       className={`col-span-2 px-2 py-1.5 border rounded-lg text-sm outline-none focus:ring-2 bg-white ${insufficient ? 'border-red-400 focus:ring-red-500 text-red-700 font-semibold' : 'border-gray-300 focus:ring-blue-500'}`}
-                      placeholder="จำนวน" />
+                      placeholder={t('doc.qty_placeholder')} />
                     <div className="col-span-2 px-2 py-1.5 text-sm text-gray-700">
                       ฿{item.unit_price.toLocaleString()}{hasCustomPrice && <span className="ml-1 text-xs text-green-600">✓</span>}
                     </div>
@@ -234,7 +232,7 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
                   </div>
                   {insufficient && (
                     <p className="text-xs text-red-700 mt-1.5 ml-1">
-                      ⚠️ จำนวนสินค้าไม่เพียงพอ — มีในสต๊อก {product!.quantity} {product!.unit ?? ''} แต่สั่ง {item.quantity} {product!.unit ?? ''}
+                      {t('doc.insufficient_row').replace('{available}', String(product!.quantity)).replace(/\{unit\}/g, product!.unit ?? '').replace('{requested}', String(item.quantity))}
                     </p>
                   )}
                 </div>
@@ -251,8 +249,8 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
                 selectedCustomer?.tax_id
                   ? undefined
                   : customerId
-                    ? 'ลูกค้ารายนี้ยังไม่มีเลขผู้เสียภาษีในระบบ — เพิ่มได้ที่หน้าข้อมูลลูกค้า'
-                    : 'กรุณาเลือกลูกค้าก่อน จึงจะแสดงเลขผู้เสียภาษี'
+                    ? t('doc.no_tax_id_hint')
+                    : t('doc.select_customer_hint')
               }
             >
               <input
@@ -263,13 +261,13 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
                 className="rounded text-blue-600 disabled:opacity-50"
               />
               <span className={selectedCustomer?.tax_id ? 'text-gray-700' : 'text-gray-400'}>
-                แสดงเลขผู้เสียภาษีของลูกค้าในเอกสาร
+                {t('doc.show_tax_id')}
               </span>
             </label>
 
             <label className="flex items-center gap-2 text-sm border-t border-gray-100 pt-3">
               <input type="checkbox" checked={includeVat} onChange={(e) => setIncludeVat(e.target.checked)} className="rounded text-blue-600" />
-              <span className="text-gray-700">รวมภาษี VAT</span>
+              <span className="text-gray-700">{t('doc.include_vat')}</span>
               {includeVat && (
                 <>
                   <span className="text-gray-400 mx-2">|</span>
@@ -281,15 +279,15 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
             </label>
 
             <div className="border-t border-gray-100 pt-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">ส่วนลด</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">{t('doc.discount_title')}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">% ส่วนลด</label>
+                  <label className="block text-xs text-gray-500 mb-1">{t('doc.discount_pct')}</label>
                   <input type="number" min="0" max="100" step="0.1" value={discountPct} onChange={(e) => setDiscountPct(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">ยอดบาท</label>
+                  <label className="block text-xs text-gray-500 mb-1">{t('doc.discount_amt')}</label>
                   <input type="number" min="0" step="0.01" value={discountAmt} onChange={(e) => setDiscountAmt(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
@@ -299,11 +297,11 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
             <div className="border-t border-gray-100 pt-3">
               <label className="flex items-center gap-2 text-sm mb-2">
                 <input type="checkbox" checked={hasOther} onChange={(e) => setHasOther(e.target.checked)} className="rounded text-blue-600" />
-                <span className="text-gray-700">ค่าใช้จ่ายอื่น ๆ (เช่น ค่าขนส่ง)</span>
+                <span className="text-gray-700">{t('doc.other_expenses')}</span>
               </label>
               {hasOther && (
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={otherLabel} onChange={(e) => setOtherLabel(e.target.value)} placeholder="ชื่อรายการ"
+                  <input value={otherLabel} onChange={(e) => setOtherLabel(e.target.value)} placeholder={t('doc.item_name_placeholder')}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   <input type="number" step="0.01" value={otherAmt} onChange={(e) => setOtherAmt(Number(e.target.value))} placeholder="0.00"
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
@@ -313,53 +311,53 @@ export default function CreateOrderClient({ customers, products, prefill }: Prop
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">หมายเหตุ (ถ้ามี)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('doc.notes_optional')}</label>
             <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           <div className="border-t border-gray-100 pt-3 space-y-1.5 max-w-xs ml-auto text-sm">
-            <div className="flex justify-between text-gray-600"><span>ยอดรวมก่อนปรับ</span><span>฿{subtotal.toLocaleString()}</span></div>
+            <div className="flex justify-between text-gray-600"><span>{t('doc.subtotal_before_adj')}</span><span>฿{subtotal.toLocaleString()}</span></div>
             {totalDiscount > 0 && (
-              <div className="flex justify-between text-red-600"><span>ส่วนลด</span><span>-฿{totalDiscount.toLocaleString()}</span></div>
+              <div className="flex justify-between text-red-600"><span>{t('doc.discount')}</span><span>-฿{totalDiscount.toLocaleString()}</span></div>
             )}
             {includeVat && (
-              <div className="flex justify-between text-gray-600"><span>VAT ({vatPercent}%)</span><span>฿{vatAmount.toLocaleString()}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{t('doc.vat_line_noc').replace('{pct}', String(vatPercent))}</span><span>฿{vatAmount.toLocaleString()}</span></div>
             )}
             {hasOther && otherAmt > 0 && (
-              <div className="flex justify-between text-gray-600"><span>{otherLabel || 'อื่นๆ'}</span><span>฿{other.toLocaleString()}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{otherLabel || t('doc.other_misc')}</span><span>฿{other.toLocaleString()}</span></div>
             )}
             <div className="flex justify-between text-base font-bold text-gray-900 pt-1.5 border-t border-gray-200">
-              <span>ยอดสุทธิ</span><span>฿{total.toLocaleString()}</span>
+              <span>{t('doc.grand_total_noc')}</span><span>฿{total.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         {hasInsufficient && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
-            <p className="font-semibold mb-2">⚠️ จำนวนสินค้าไม่เพียงพอ ({insufficientItems.length} รายการ)</p>
+            <p className="font-semibold mb-2">{t('doc.insufficient_title').replace('{count}', String(insufficientItems.length))}</p>
             <ul className="space-y-1 ml-5 list-disc">
               {insufficientItems.map((it) => (
                 <li key={it.idx}>
-                  {it.name}: สั่ง {it.requested} {it.unit} / มีในสต๊อก {it.available} {it.unit}
+                  {t('doc.insufficient_line').replace('{name}', it.name).replace('{requested}', String(it.requested)).replace(/\{unit\}/g, it.unit).replace('{available}', String(it.available))}
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs">ส่งคำสั่งซื้อทันทีไม่ได้ — กด "บันทึกฉบับร่าง" เพื่อเก็บไว้ก่อน (ยังไม่ตัดสต๊อก)</p>
+            <p className="mt-2 text-xs">{t('doc.insufficient_hint')}</p>
           </div>
         )}
 
         <div className="flex flex-wrap gap-3 justify-end">
           <button onClick={() => router.back()}
-            className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">ยกเลิก</button>
+            className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">{t('common.cancel')}</button>
           <button onClick={() => handleSubmit(true)} disabled={saving}
             className="px-5 py-2.5 border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 disabled:opacity-60">
-            {saving ? 'บันทึก…' : 'บันทึกฉบับร่าง'}
+            {saving ? t('doc.saving_ellipsis') : t('doc.save_draft')}
           </button>
           <button onClick={() => handleSubmit(false)} disabled={saving || hasInsufficient}
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            title={hasInsufficient ? 'จำนวนสินค้าไม่เพียงพอ' : undefined}>
-            {saving ? 'บันทึก…' : 'ส่งคำสั่งซื้อ'}
+            title={hasInsufficient ? t('doc.insufficient_disabled_title') : undefined}>
+            {saving ? t('doc.saving_ellipsis') : t('doc.submit_order')}
           </button>
         </div>
       </div>

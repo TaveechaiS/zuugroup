@@ -6,21 +6,7 @@ import { Search, Download, Eye, Edit2, X, FileText, ShoppingCart, ChevronUp, Che
 import { generateQuotationPdf, generateOrderPdf, buildQuotationHtml, buildOrderHtml, type DocData } from '@/lib/pdf/documentPdf'
 import { quotationsApi, ordersApi } from '@/lib/api/services'
 import PdfPreviewModal from '@/components/shared/PdfPreviewModal'
-
-const Q_STATUS: Record<string, { label: string; color: string }> = {
-  draft: { label: 'ฉบับร่าง', color: 'bg-gray-100 text-gray-700' },
-  pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'อนุมัติ', color: 'bg-green-100 text-green-700' },
-  ordered: { label: 'ออกคำสั่งซื้อแล้ว', color: 'bg-purple-100 text-purple-700' },
-  rejected: { label: 'ไม่อนุมัติ', color: 'bg-red-100 text-red-700' },
-}
-const O_STATUS: Record<string, { label: string; color: string }> = {
-  pending_review: { label: 'รอตรวจสอบ', color: 'bg-yellow-100 text-yellow-700' },
-  processing: { label: 'รอยืนยันการขาย', color: 'bg-blue-100 text-blue-700' },
-  completed: { label: 'สำเร็จ', color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'ยกเลิก', color: 'bg-gray-100 text-gray-700' },
-  rejected: { label: 'ไม่ผ่าน', color: 'bg-red-100 text-red-700' },
-}
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // Which statuses count as "finished work" (used by the active/finished filter).
 // Approved quotations are still ACTIVE — you may still convert them to an order.
@@ -34,6 +20,23 @@ interface Props { quotations: any[]; orders: any[]; basePath?: string }
 
 export default function DocumentsClient({ quotations, orders, basePath = '/dashboard/sales' }: Props) {
   const router = useRouter()
+  const { t, lang } = useLanguage()
+
+  const Q_STATUS: Record<string, { label: string; color: string }> = {
+    draft: { label: t('doc.status.draft'), color: 'bg-gray-100 text-gray-700' },
+    pending: { label: t('doc.status.pending'), color: 'bg-yellow-100 text-yellow-700' },
+    approved: { label: t('doc.status.approved'), color: 'bg-green-100 text-green-700' },
+    ordered: { label: t('doc.status.ordered'), color: 'bg-purple-100 text-purple-700' },
+    rejected: { label: t('doc.status.rejected_q'), color: 'bg-red-100 text-red-700' },
+  }
+  const O_STATUS: Record<string, { label: string; color: string }> = {
+    pending_review: { label: t('doc.status.pending_review'), color: 'bg-yellow-100 text-yellow-700' },
+    processing: { label: t('doc.status.processing'), color: 'bg-blue-100 text-blue-700' },
+    completed: { label: t('doc.status.completed'), color: 'bg-green-100 text-green-700' },
+    cancelled: { label: t('doc.status.cancelled'), color: 'bg-gray-100 text-gray-700' },
+    rejected: { label: t('doc.status.rejected'), color: 'bg-red-100 text-red-700' },
+  }
+
   const [tab, setTab] = useState<'all' | 'quotation' | 'order'>('all')
   const [phase, setPhase] = useState<'active' | 'finished' | 'all'>('active')
   const [search, setSearch] = useState('')
@@ -75,8 +78,6 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
     const q: any[] = quotations.map((x) => ({ ...x, type: 'quotation' as const, number: x.quotation_number, statusInfo: Q_STATUS[x.status] }))
     const o: any[] = orders.map((x) => ({ ...x, type: 'order' as const, number: x.order_number, statusInfo: O_STATUS[x.status] }))
 
-    // Cross-reference quotation <-> order via orders.source_quotation_id, so each
-    // row can show & link to its related document.
     const qById = new Map(q.map((d) => [d.id, d]))
     const orderBySrcQ = new Map(o.filter((d) => d.source_quotation_id).map((d) => [d.source_quotation_id, d]))
     for (const d of o) {
@@ -105,7 +106,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
         ].filter(Boolean).join(' ').toLowerCase()
         return haystack.includes(search.toLowerCase())
       })
-  }, [tab, phase, search, statusFilter, quotations, orders])
+  }, [tab, phase, search, statusFilter, quotations, orders, lang])
 
   const sortedCombined = sortKey ? [...combined].sort((a, b) => {
     if (sortKey === 'total_amount') {
@@ -117,7 +118,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
       return sortDir === 'asc' ? av - bv : bv - av
     }
     const av = String(a[sortKey] ?? ''), bv = String(b[sortKey] ?? '')
-    return sortDir === 'asc' ? av.localeCompare(bv, 'th') : bv.localeCompare(av, 'th')
+    return sortDir === 'asc' ? av.localeCompare(bv, lang) : bv.localeCompare(av, lang)
   }) : combined
   const totalPages = Math.max(1, Math.ceil(sortedCombined.length / PAGE_SIZE))
   const paginated = sortedCombined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -126,10 +127,10 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
     if (tab === 'quotation') return Object.entries(Q_STATUS).map(([k, v]) => ({ value: k, label: v.label }))
     if (tab === 'order') return Object.entries(O_STATUS).map(([k, v]) => ({ value: k, label: v.label }))
     return [
-      ...Object.entries(Q_STATUS).map(([k, v]) => ({ value: k, label: `[ใบเสนอ] ${v.label}` })),
-      ...Object.entries(O_STATUS).map(([k, v]) => ({ value: k, label: `[คำสั่ง] ${v.label}` })),
+      ...Object.entries(Q_STATUS).map(([k, v]) => ({ value: k, label: `${t('doc.prefix_quotation')} ${v.label}` })),
+      ...Object.entries(O_STATUS).map(([k, v]) => ({ value: k, label: `${t('doc.prefix_order')} ${v.label}` })),
     ]
-  }, [tab])
+  }, [tab, lang])
 
   const [pdfBusy, setPdfBusy] = useState(false)
 
@@ -178,13 +179,13 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
       setPreviewPdf({
         html,
         filename: `${doc.number}.pdf`,
-        title: `${isQuotation ? 'ใบเสนอราคา' : 'คำสั่งซื้อ'} ${doc.number}`,
+        title: `${isQuotation ? t('doc.quotation') : t('doc.order')} ${doc.number}`,
         data: pdfData,
         isQuotation,
       })
     } catch (err: any) {
       console.error('exportToPDF failed:', err)
-      alert('สร้าง PDF ไม่สำเร็จ: ' + (err?.message ?? 'unknown error'))
+      alert(`${t('doc.save_failed')}: ` + (err?.message ?? 'unknown error'))
     } finally {
       setPdfBusy(false)
     }
@@ -207,21 +208,21 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
         <div className="flex flex-wrap items-center gap-3 p-5 border-b border-gray-100">
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {[
-              { id: 'all' as const, label: 'ทั้งหมด' },
-              { id: 'quotation' as const, label: 'ใบเสนอราคา' },
-              { id: 'order' as const, label: 'คำสั่งซื้อ' },
-            ].map((t) => (
-              <button key={t.id} onClick={() => { setTab(t.id); setStatusFilter('all'); setPage(1) }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium ${tab === t.id ? 'bg-white shadow-sm text-blue-700' : 'text-gray-600'}`}>
-                {t.label}
+              { id: 'all' as const, label: t('doc.tab_all') },
+              { id: 'quotation' as const, label: t('doc.tab_quotation') },
+              { id: 'order' as const, label: t('doc.tab_order') },
+            ].map((tb) => (
+              <button key={tb.id} onClick={() => { setTab(tb.id); setStatusFilter('all'); setPage(1) }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium ${tab === tb.id ? 'bg-white shadow-sm text-blue-700' : 'text-gray-600'}`}>
+                {tb.label}
               </button>
             ))}
           </div>
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {[
-              { id: 'active' as const, label: 'กำลังดำเนินการ' },
-              { id: 'finished' as const, label: 'เสร็จสิ้น' },
-              { id: 'all' as const, label: 'ทั้งหมด' },
+              { id: 'active' as const, label: t('doc.phase_active') },
+              { id: 'finished' as const, label: t('doc.phase_finished') },
+              { id: 'all' as const, label: t('doc.tab_all') },
             ].map((p) => (
               <button key={p.id} onClick={() => { setPhase(p.id); setStatusFilter('all'); setPage(1) }}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium ${phase === p.id ? 'bg-white shadow-sm text-indigo-700' : 'text-gray-600'}`}>
@@ -231,27 +232,27 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
           </div>
           <div className="relative w-full sm:w-auto">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="ค้นหา..."
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder={t('common.search')}
               className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56" />
           </div>
           <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="all">สถานะทั้งหมด</option>
+            <option value="all">{t('doc.status_all')}</option>
             {statusOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <p className="ml-auto text-sm text-gray-500">{combined.length} รายการ</p>
+          <p className="ml-auto text-sm text-gray-500">{combined.length} {t('common.records')}</p>
         </div>
 
         <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">เลขที่</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('type')}>ประเภท<SortIcon k="type" /></th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ลูกค้า</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('total_amount')}>มูลค่า<SortIcon k="total_amount" /></th>
-              <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">สถานะ</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('created_at')}>วันที่<SortIcon k="created_at" /></th>
-              <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">จัดการ</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('doc.number')}</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('type')}>{t('doc.type')}<SortIcon k="type" /></th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('doc.customer')}</th>
+              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('total_amount')}>{t('doc.value')}<SortIcon k="total_amount" /></th>
+              <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('doc.status_col')}</th>
+              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('created_at')}>{t('doc.date')}<SortIcon k="created_at" /></th>
+              <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('doc.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -262,16 +263,16 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
                   {doc.relatedRef && (
                     <button onClick={() => openDetail(doc.relatedRef.doc ?? { type: doc.relatedRef.type, id: doc.relatedRef.id })}
                       className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline"
-                      title="เปิดเอกสารที่เกี่ยวข้อง">
+                      title={t('doc.related_open')}>
                       {doc.type === 'order'
-                        ? <>↩ จาก {doc.relatedRef.number ?? 'ใบเสนอราคา'}</>
-                        : <>→ {doc.relatedRef.number ?? 'คำสั่งซื้อ'}</>}
+                        ? <>↩ {t('doc.related_from')} {doc.relatedRef.number ?? t('doc.quotation')}</>
+                        : <>→ {doc.relatedRef.number ?? t('doc.order')}</>}
                     </button>
                   )}
                 </td>
                 <td className="px-5 py-3.5">
                   <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${doc.type === 'quotation' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
-                    {doc.type === 'quotation' ? 'ใบเสนอราคา' : 'คำสั่งซื้อ'}
+                    {doc.type === 'quotation' ? t('doc.quotation') : t('doc.order')}
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-gray-900">{doc.customer?.company_name ?? '-'}</td>
@@ -282,38 +283,38 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap">
-                  <div>{new Date(doc.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                  <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                  <div>{new Date(doc.created_at).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                  <div className="text-xs text-gray-400">{new Date(doc.created_at).toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center justify-center gap-1">
                     {doc.type === 'quotation' && doc.status === 'draft' && (
-                      <button onClick={() => editDraft(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title="แก้ไขฉบับร่าง">
+                      <button onClick={() => editDraft(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title={t('doc.edit_draft')}>
                         <Edit2 size={15} />
                       </button>
                     )}
                     {doc.type === 'quotation' && doc.status === 'approved' && (
-                      <button onClick={() => convertToOrder(doc)} className="text-indigo-500 hover:text-indigo-700 p-1.5 rounded transition" title="แปลงเป็นคำสั่งซื้อ">
+                      <button onClick={() => convertToOrder(doc)} className="text-indigo-500 hover:text-indigo-700 p-1.5 rounded transition" title={t('doc.convert_to_order')}>
                         <ShoppingCart size={15} />
                       </button>
                     )}
-                    <button onClick={() => openDetail(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title="ดูข้อมูล">
+                    <button onClick={() => openDetail(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title={t('doc.view_details')}>
                       <Eye size={15} />
                     </button>
-                    <button onClick={() => exportToPDF(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title="ดาวน์โหลด PDF">
+                    <button onClick={() => exportToPDF(doc)} className="text-gray-400 hover:text-blue-600 p-1.5 rounded transition" title={t('doc.download_pdf')}>
                       <Download size={15} />
                     </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่มีเอกสาร</td></tr>}
+            {paginated.length === 0 && <tr><td colSpan={7} className="text-center py-10 text-gray-400">{t('doc.no_documents')}</td></tr>}
           </tbody>
         </table></div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedCombined.length)} จาก {sortedCombined.length} รายการ</span>
+            <span>{t('common.showing')} {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sortedCombined.length)} {t('common.of')} {sortedCombined.length} {t('common.records')}</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
@@ -359,6 +360,8 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
           loading={viewingLoading}
           onClose={() => { setViewing(null); setViewingFull(null) }}
           onExportPDF={() => exportToPDF(viewing)}
+          Q_STATUS={Q_STATUS}
+          O_STATUS={O_STATUS}
         />
       )}
 
@@ -366,7 +369,7 @@ export default function DocumentsClient({ quotations, orders, basePath = '/dashb
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
           <div className="bg-white rounded-xl px-6 py-5 flex items-center gap-3 shadow-xl">
             <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-            <p className="text-sm text-gray-700">กำลังสร้าง PDF…</p>
+            <p className="text-sm text-gray-700">{t('doc.generating_pdf')}</p>
           </div>
         </div>
       )}
@@ -392,23 +395,22 @@ function mergeDuplicateItems(items: any[]): any[] {
   return Array.from(map.values())
 }
 
-function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
+function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF, Q_STATUS, O_STATUS }: {
   doc: any; full: any; loading: boolean; onClose: () => void; onExportPDF: () => void
+  Q_STATUS: Record<string, { label: string; color: string }>; O_STATUS: Record<string, { label: string; color: string }>
 }) {
+  const { t, lang } = useLanguage()
   const isQuotation = doc.type === 'quotation'
   const items = full?.items ?? []
-  const typeLabel = isQuotation ? 'ใบเสนอราคา' : 'คำสั่งซื้อ'
+  const typeLabel = isQuotation ? t('doc.quotation') : t('doc.order')
   const typeColor = isQuotation ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
 
-  // When opened via a cross-reference link, `doc` may be a minimal stub
-  // ({type,id}) — fall back to the fetched `full` record for header fields.
   const docNumber = doc.number ?? full?.quotation_number ?? full?.order_number
   const docStatus = doc.status ?? full?.status
   const statusInfo = doc.statusInfo ?? (isQuotation ? Q_STATUS[full?.status] : O_STATUS[full?.status])
   const createdAt = doc.created_at ?? full?.created_at
   const creator = doc.creator ?? full?.creator
 
-  // Esc to close + lock body scroll
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -420,7 +422,6 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
   return (
     <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-start gap-3 min-w-0">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${typeColor}`}>
@@ -434,50 +435,47 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {createdAt && new Date(createdAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                {(creator?.first_name || creator?.last_name) && ` · โดย ${creator?.first_name ?? ''} ${creator?.last_name ?? ''}`}
+                {createdAt && new Date(createdAt).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {(creator?.first_name || creator?.last_name) && ` · ${t('doc.by')} ${creator?.first_name ?? ''} ${creator?.last_name ?? ''}`}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 shrink-0" aria-label="ปิด">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 shrink-0" aria-label={t('common.close')}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <div className="w-10 h-10 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3" />
-              <p className="text-sm">กำลังโหลดข้อมูล...</p>
+              <p className="text-sm">{t('doc.loading_data')}</p>
             </div>
           )}
 
           {!loading && full && (
             <>
-              {/* Customer */}
               <section>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">ข้อมูลลูกค้า</h4>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t('doc.customer_info')}</h4>
                 <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5 text-sm">
-                  <Field label="บริษัท" value={full.customer?.company_name} />
-                  <Field label="ผู้ติดต่อ" value={full.customer?.contact_name} />
-                  <Field label="เบอร์โทรศัพท์" value={full.customer?.phone} />
-                  <Field label="อีเมล" value={full.customer?.email} />
-                  <Field label="ที่อยู่" value={full.customer?.address} className="sm:col-span-2" />
+                  <Field label={t('doc.field.company')} value={full.customer?.company_name} />
+                  <Field label={t('doc.field.contact')} value={full.customer?.contact_name} />
+                  <Field label={t('doc.field.phone')} value={full.customer?.phone} />
+                  <Field label={t('doc.field.email')} value={full.customer?.email} />
+                  <Field label={t('doc.field.address')} value={full.customer?.address} className="sm:col-span-2" />
                 </div>
               </section>
 
-              {/* Items — merge duplicate products into single row for cleaner display */}
               {(() => {
                 const merged = mergeDuplicateItems(items)
                 const hadDuplicates = merged.length !== items.length
                 return (
                   <section>
                     <div className="flex items-baseline justify-between mb-3">
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">รายการสินค้า ({merged.length} รายการ)</h4>
+                      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('doc.items_count').replace('{count}', String(merged.length))}</h4>
                       {hadDuplicates && (
                         <span className="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                          รวมรายการซ้ำแล้ว (จริง {items.length} แถว)
+                          {t('doc.merged_note').replace('{count}', String(items.length))}
                         </span>
                       )}
                     </div>
@@ -487,10 +485,10 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
                           <thead>
                             <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
                               <th className="text-center px-3 py-2.5 font-medium w-12">#</th>
-                              <th className="text-left px-4 py-2.5 font-medium">สินค้า</th>
-                              <th className="text-right px-4 py-2.5 font-medium">จำนวน</th>
-                              <th className="text-right px-4 py-2.5 font-medium">ราคา/หน่วย</th>
-                              <th className="text-right px-4 py-2.5 font-medium">รวม</th>
+                              <th className="text-left px-4 py-2.5 font-medium">{t('doc.col.product')}</th>
+                              <th className="text-right px-4 py-2.5 font-medium">{t('doc.col.qty')}</th>
+                              <th className="text-right px-4 py-2.5 font-medium">{t('doc.col.unit_price')}</th>
+                              <th className="text-right px-4 py-2.5 font-medium">{t('doc.col.total')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -499,7 +497,7 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
                                 <td className="px-3 py-3 text-center text-gray-500 text-xs font-mono">{i + 1}</td>
                                 <td className="px-4 py-3 text-gray-900">
                                   {it.product?.name ?? '-'}
-                                  {it._rows > 1 && <span className="ml-2 text-[10px] text-orange-600">({it._rows} แถว)</span>}
+                                  {it._rows > 1 && <span className="ml-2 text-[10px] text-orange-600">{t('doc.rows_count').replace('{count}', String(it._rows))}</span>}
                                 </td>
                                 <td className="px-4 py-3 text-right text-gray-700">{it.quantity} {it.product?.unit ?? ''}</td>
                                 <td className="px-4 py-3 text-right text-gray-700">฿{(it.negotiated_price ?? it.unit_price)?.toLocaleString()}</td>
@@ -514,43 +512,41 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
                 )
               })()}
 
-              {/* Totals */}
               <section className="flex justify-end">
                 <div className="bg-blue-50 rounded-xl p-4 min-w-[260px] space-y-1.5 text-sm">
                   {full.subtotal !== undefined && (
                     <div className="flex justify-between text-gray-600">
-                      <span>ยอดก่อน VAT</span><span>฿{full.subtotal?.toLocaleString()}</span>
+                      <span>{t('doc.subtotal_before_vat')}</span><span>฿{full.subtotal?.toLocaleString()}</span>
                     </div>
                   )}
                   {full.vat_amount !== undefined && (
                     <div className="flex justify-between text-gray-600">
-                      <span>VAT ({full.vat_percent ?? 7}%)</span><span>฿{full.vat_amount?.toLocaleString()}</span>
+                      <span>{t('doc.vat_line').replace('{pct}', String(full.vat_percent ?? 7))}</span><span>฿{full.vat_amount?.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-1.5 border-t border-blue-200 text-base font-semibold text-gray-900">
-                    <span>ยอดสุทธิ</span><span>฿{full.total_amount?.toLocaleString()}</span>
+                    <span>{t('doc.grand_total')}</span><span>฿{full.total_amount?.toLocaleString()}</span>
                   </div>
                 </div>
               </section>
 
-              {/* Notes / Contract / Reject */}
               {(full.notes || full.contract_period_days || full.reject_reason) && (
                 <section className="space-y-2 text-sm">
                   {full.contract_period_days && (
                     <div className="bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-gray-500">ระยะเวลาสัญญา: </span>
-                      <span className="text-gray-900">{full.contract_period_days} วัน</span>
+                      <span className="text-gray-500">{t('doc.contract_period')} </span>
+                      <span className="text-gray-900">{full.contract_period_days} {t('doc.contract_period_days')}</span>
                     </div>
                   )}
                   {full.notes && (
                     <div className="bg-gray-50 rounded-lg px-3 py-2">
-                      <span className="text-gray-500">หมายเหตุ: </span>
+                      <span className="text-gray-500">{t('doc.notes_label')} </span>
                       <span className="text-gray-900 whitespace-pre-wrap">{full.notes}</span>
                     </div>
                   )}
                   {full.reject_reason && (
                     <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700">
-                      <span className="font-medium">เหตุผลที่ปฏิเสธ: </span>
+                      <span className="font-medium">{t('doc.reject_reason_title')} </span>
                       <span className="whitespace-pre-wrap">{full.reject_reason}</span>
                     </div>
                   )}
@@ -560,11 +556,10 @@ function DocumentDetailModal({ doc, full, loading, onClose, onExportPDF }: {
           )}
         </div>
 
-        {/* Footer actions */}
         <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-gray-100 bg-gray-50">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg font-medium">ปิด</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg font-medium">{t('common.close')}</button>
           <button onClick={onExportPDF} disabled={loading || !full} className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm">
-            <Download size={15} /> ดูตัวอย่าง PDF
+            <Download size={15} /> {t('doc.view_pdf_preview')}
           </button>
         </div>
       </div>

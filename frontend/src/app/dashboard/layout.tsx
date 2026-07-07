@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { fetchMe, currentUser } from '@/lib/api/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import { UIProvider, useUI } from '@/lib/ui-context'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 function DashboardInner({ user, children }: { user: any; children: React.ReactNode }) {
   const { mobileSidebarOpen, closeMobileSidebar } = useUI()
@@ -24,6 +25,7 @@ function DashboardInner({ user, children }: { user: any; children: React.ReactNo
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -60,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-400 text-sm">กำลังโหลด...</div>
+        <div className="text-gray-400 text-sm">{t('layout.loading')}</div>
       </div>
     )
   }

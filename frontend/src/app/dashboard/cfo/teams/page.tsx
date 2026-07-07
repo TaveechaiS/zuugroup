@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import TopBar from '@/components/layout/TopBar'
 import { X, Users as UsersIcon } from 'lucide-react'
 import { teamsApi } from '@/lib/api/services'
-
-const ROLE_LABELS: Record<string, string> = { admin: 'ผู้ดูแล', manager: 'ผู้จัดการ', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร' }
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function CFOTeamsPage() {
+  const { t } = useLanguage()
+  const ROLE_LABELS: Record<string, string> = { admin: t('role.short.admin'), manager: t('role.short.manager'), sales: t('role.short.sales'), cfo: t('role.short.cfo') }
   const [teams, setTeams] = useState<any[]>([])
   const [viewing, setViewing] = useState<any>(null)
 
@@ -15,18 +16,18 @@ export default function CFOTeamsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopBar title="ทีมทั้งหมด" />
+      <TopBar title={t('teams.title_all')} />
       <div className="p-4 sm:p-6">
-        <p className="text-sm text-gray-500 mb-4">ทั้งหมด {teams.length} ทีม</p>
+        <p className="text-sm text-gray-500 mb-4">{t('teams.all_count').replace('{count}', String(teams.length))}</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {teams.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:border-blue-200 cursor-pointer" onClick={() => setViewing(t)}>
-              <h3 className="font-semibold text-gray-900">{t.name}</h3>
-              {t.description && <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>}
-              <p className="text-xs text-gray-500 mt-3 flex items-center gap-1"><UsersIcon size={12} /> {(t.members ?? []).length} สมาชิก</p>
+          {teams.map((tm) => (
+            <div key={tm.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:border-blue-200 cursor-pointer" onClick={() => setViewing(tm)}>
+              <h3 className="font-semibold text-gray-900">{tm.name}</h3>
+              {tm.description && <p className="text-xs text-gray-500 mt-0.5">{tm.description}</p>}
+              <p className="text-xs text-gray-500 mt-3 flex items-center gap-1"><UsersIcon size={12} /> {(tm.members ?? []).length} {t('teams.members')}</p>
             </div>
           ))}
-          {teams.length === 0 && <div className="col-span-full text-center py-10 text-gray-400 text-sm">ยังไม่มีทีม</div>}
+          {teams.length === 0 && <div className="col-span-full text-center py-10 text-gray-400 text-sm">{t('teams.no_teams')}</div>}
         </div>
       </div>
 
@@ -41,7 +42,7 @@ export default function CFOTeamsPage() {
               <button onClick={() => setViewing(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><UsersIcon size={14} /> สมาชิก ({(viewing.members ?? []).length})</p>
+              <p className="text-sm font-medium text-gray-700 flex items-center gap-2"><UsersIcon size={14} /> {t('teams.members_count').replace('{count}', String((viewing.members ?? []).length))}</p>
               {(viewing.members ?? []).map((m: any) => (
                 <div key={m.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded-lg">
                   <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-[10px]">{m.first_name?.[0]}{m.last_name?.[0]}</div>
@@ -52,7 +53,7 @@ export default function CFOTeamsPage() {
                   <span className="text-xs text-gray-500">{ROLE_LABELS[m.role]}</span>
                 </div>
               ))}
-              {(viewing.members ?? []).length === 0 && <p className="text-center text-gray-400 text-xs py-3">ยังไม่มีสมาชิก</p>}
+              {(viewing.members ?? []).length === 0 && <p className="text-center text-gray-400 text-xs py-3">{t('teams.no_members')}</p>}
             </div>
           </div>
         </div>

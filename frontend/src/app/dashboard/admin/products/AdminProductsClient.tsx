@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Plus, Edit2, Trash2, Upload, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type SortKey = 'product_code' | 'quantity' | 'price_per_unit' | 'status'
 type SortDir = 'asc' | 'desc'
@@ -11,6 +12,7 @@ import { productsApi } from '@/lib/api/services'
 interface Props { products: any[]; categories: any[]; onReload: () => void }
 
 export default function AdminProductsClient({ products, categories, onReload }: Props) {
+  const { t, lang } = useLanguage()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
@@ -58,8 +60,8 @@ export default function AdminProductsClient({ products, categories, onReload }: 
       return sortDir === 'asc' ? av - bv : bv - av
     }
     return sortDir === 'asc'
-      ? String(av).localeCompare(String(bv), 'th')
-      : String(bv).localeCompare(String(av), 'th')
+      ? String(av).localeCompare(String(bv), lang)
+      : String(bv).localeCompare(String(av), lang)
   }) : filtered
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
@@ -85,7 +87,7 @@ export default function AdminProductsClient({ products, categories, onReload }: 
 
 
   const handleFile = (file: File) => {
-    if (file.size > 2 * 1024 * 1024) { setError('ไฟล์ใหญ่เกิน 2MB'); return }
+    if (file.size > 2 * 1024 * 1024) { setError(t('cf.file_too_big')); return }
     const reader = new FileReader()
     reader.onloadend = () => setForm((f) => ({ ...f, image_url: reader.result as string }))
     reader.readAsDataURL(file)
@@ -102,7 +104,7 @@ export default function AdminProductsClient({ products, categories, onReload }: 
   }
 
   const remove = async (p: any) => {
-    if (!confirm(`ลบสินค้า ${p.name}?`)) return
+    if (!confirm(t('ap.confirm_delete').replace('{name}', p.name))) return
     await productsApi.remove(p.id); onReload()
   }
 
@@ -112,22 +114,22 @@ export default function AdminProductsClient({ products, categories, onReload }: 
         <div className="flex flex-wrap items-center gap-3 p-4 sm:p-5 border-b border-gray-100">
           <div className="relative w-full sm:w-auto">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder="ค้นหา..." className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} placeholder={t('common.search')} className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-72" />
           </div>
-          <button onClick={startAdd} className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><Plus size={14} /> เพิ่มสินค้า</button>
+          <button onClick={startAdd} className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"><Plus size={14} /> {t('ap.add_product')}</button>
         </div>
 
         <div className="overflow-x-auto"><table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>รหัส<SortIcon k="product_code" /></th>
-              <th className="text-left px-5 py-3">ชื่อสินค้า</th>
-              <th className="text-left px-5 py-3">หมวดหมู่</th>
-              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>คงเหลือ<SortIcon k="quantity" /></th>
-              <th className="text-right px-5 py-3">ต้นทุน</th>
-              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>ราคาขาย<SortIcon k="price_per_unit" /></th>
-              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>สถานะ<SortIcon k="status" /></th>
-              <th className="text-center px-5 py-3">จัดการ</th>
+              <th className="text-left px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>{t('ap.col.code')}<SortIcon k="product_code" /></th>
+              <th className="text-left px-5 py-3">{t('ap.col.name')}</th>
+              <th className="text-left px-5 py-3">{t('ap.col.category')}</th>
+              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>{t('ap.col.stock')}<SortIcon k="quantity" /></th>
+              <th className="text-right px-5 py-3">{t('ap.col.cost')}</th>
+              <th className="text-right px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>{t('ap.col.sale_price')}<SortIcon k="price_per_unit" /></th>
+              <th className="text-center px-5 py-3 cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>{t('ap.col.status')}<SortIcon k="status" /></th>
+              <th className="text-center px-5 py-3">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -141,7 +143,7 @@ export default function AdminProductsClient({ products, categories, onReload }: 
                 <td className="px-5 py-3.5 text-right text-gray-900">฿{p.price_per_unit.toLocaleString()}</td>
                 <td className="px-5 py-3.5 text-center">
                   <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {p.status === 'available' ? 'พร้อมขาย' : 'ปิด'}
+                    {p.status === 'available' ? t('ap.status.available') : t('ap.status.off')}
                   </span>
                 </td>
                 <td className="px-5 py-3.5">
@@ -152,13 +154,13 @@ export default function AdminProductsClient({ products, categories, onReload }: 
                 </td>
               </tr>
             ))}
-            {paginated.length === 0 && <tr><td colSpan={8} className="text-center py-10 text-gray-400">ไม่พบสินค้า</td></tr>}
+            {paginated.length === 0 && <tr><td colSpan={8} className="text-center py-10 text-gray-400">{t('ap.no_products')}</td></tr>}
           </tbody>
         </table></div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>{t('common.showing')} {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} {t('common.of')} {filtered.length} {t('common.records')}</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -191,34 +193,34 @@ export default function AdminProductsClient({ products, categories, onReload }: 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="font-semibold text-gray-900 mb-4">{editing ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{editing ? t('ap.edit_title') : t('ap.add_new_title')}</h3>
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
             <form onSubmit={save} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">รหัสสินค้า</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.code')}</label>
                   <input value={form.product_code} onChange={(e) => setForm({ ...form, product_code: e.target.value })}
                     placeholder={editing ? '' : 'auto: PRD-0001'}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
-                  <p className="text-xs text-gray-400 mt-0.5">ปล่อยว่างเพื่อ auto-gen</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('cf.auto_gen_hint')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">หน่วย (เช่น กล่อง)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.unit')}</label>
                   <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อสินค้า <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.name')} <span className="text-red-500">*</span></label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">จำนวนสินค้าคงเหลือ <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.qty')} <span className="text-red-500">*</span></label>
                   <input required type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                  {editing && <p className="text-xs text-blue-500 mt-0.5">การเปลี่ยนจำนวนจะถูกบันทึกใน Stock Log</p>}
+                  {editing && <p className="text-xs text-blue-500 mt-0.5">{t('ap.qty_hint')}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">เลขล็อต</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.lot')}</label>
                   <input value={form.lot_number} onChange={(e) => setForm({ ...form, lot_number: e.target.value })}
                     placeholder="เช่น L240501"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
@@ -226,7 +228,7 @@ export default function AdminProductsClient({ products, categories, onReload }: 
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">วันผลิต</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.mfg_date')}</label>
                   <input type="date" value={form.manufacture_date}
                     onChange={(e) => {
                       const mfg = e.target.value
@@ -247,37 +249,37 @@ export default function AdminProductsClient({ products, categories, onReload }: 
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">วันหมดอายุ</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.exp_date')}</label>
                   <input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ราคาต้นทุน (บาท)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.cost_price')}</label>
                   <input type="number" step="0.01" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-orange-200 bg-orange-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" />
-                  <p className="text-xs text-orange-600 mt-0.5">เห็นได้แค่ Admin / CFO</p>
+                  <p className="text-xs text-orange-600 mt-0.5">{t('ap.cost_hint')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ราคาขาย (บาท) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.sale_price')} <span className="text-red-500">*</span></label>
                   <input required type="number" step="0.01" value={form.price_per_unit} onChange={(e) => setForm({ ...form, price_per_unit: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">หมวดหมู่</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.category')}</label>
                 <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">-- ไม่มีหมวด --</option>
+                  <option value="">{t('ap.no_category')}</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">รูปสินค้า</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.field.image')}</label>
                 <input ref={fileRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} className="hidden" />
                 <div className="flex items-center gap-3">
                   <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                    <Upload size={14} /> อัพโหลดรูป
+                    <Upload size={14} /> {t('ap.upload')}
                   </button>
                   {form.image_url && (
                     <div className="relative">
@@ -288,15 +290,15 @@ export default function AdminProductsClient({ products, categories, onReload }: 
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('ap.col.status')}</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as any })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="available">พร้อมขาย</option>
-                  <option value="unavailable">ปิดการขาย</option>
+                  <option value="available">{t('ap.status.available')}</option>
+                  <option value="unavailable">{t('products.status.unavailable')}</option>
                 </select>
               </div>
               <div className="flex gap-2 justify-end pt-3">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">ยกเลิก</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">บันทึก</button>
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t('common.cancel')}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">{t('common.save')}</button>
               </div>
             </form>
           </div>
