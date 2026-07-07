@@ -682,6 +682,30 @@ const translations: Record<string, { th: string; en: string }> = {
 
   // Layout
   "layout.loading":        { th: "กำลังโหลด...",         en: "Loading..." },
+
+  // TopBar — settings menu
+  "topbar.settings":       { th: "ตั้งค่า",              en: "Settings" },
+
+  // Settings page
+  "settings.title":          { th: "ตั้งค่าบัญชี",         en: "Account Settings" },
+  "settings.profile_info":   { th: "ข้อมูลส่วนตัว",        en: "Profile Info" },
+  "settings.email":          { th: "อีเมล",               en: "Email" },
+  "settings.email_hint":     { th: "ไม่สามารถเปลี่ยนอีเมลได้", en: "Email cannot be changed" },
+  "settings.first_name":     { th: "ชื่อ",                en: "First Name" },
+  "settings.last_name":      { th: "นามสกุล",             en: "Last Name" },
+  "settings.phone":          { th: "เบอร์โทรศัพท์",       en: "Phone" },
+  "settings.role":           { th: "บทบาท",               en: "Role" },
+  "settings.team":           { th: "ทีม",                 en: "Team" },
+  "settings.save_profile":   { th: "บันทึกข้อมูล",        en: "Save Profile" },
+  "settings.change_password":{ th: "เปลี่ยนรหัสผ่าน",     en: "Change Password" },
+  "settings.new_password":   { th: "รหัสผ่านใหม่",        en: "New Password" },
+  "settings.confirm_password": { th: "ยืนยันรหัสผ่านใหม่", en: "Confirm New Password" },
+  "settings.password_hint":  { th: "อย่างน้อย 6 ตัวอักษร (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)", en: "At least 6 characters (leave blank to keep current)" },
+  "settings.password_mismatch": { th: "รหัสผ่านไม่ตรงกัน", en: "Passwords don't match" },
+  "settings.update_password":{ th: "อัปเดตรหัสผ่าน",      en: "Update Password" },
+  "settings.profile_saved":  { th: "บันทึกข้อมูลเรียบร้อย", en: "Profile saved" },
+  "settings.password_saved": { th: "เปลี่ยนรหัสผ่านเรียบร้อย", en: "Password changed" },
+  "settings.save_failed":    { th: "บันทึกไม่สำเร็จ",      en: "Save failed" },
 };
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(

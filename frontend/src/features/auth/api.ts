@@ -41,3 +41,9 @@ export async function fetchMe() {
 export function currentUser() {
   return getStoredUser()
 }
+
+export async function updateMe(body: { first_name?: string; last_name?: string; phone?: string; new_password?: string }) {
+  const res = await api.patch('/auth/me', body)
+  if (res.user) setStoredUser(res.user)
+  return res.user
+}

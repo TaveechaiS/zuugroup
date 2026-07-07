@@ -88,6 +88,36 @@ export async function forgotPassword(email: string, frontendUrl: string) {
   }
 }
 
+export async function updateMe(
+  userId: string,
+  body: { first_name?: string; last_name?: string; phone?: string; new_password?: string },
+  meta: ReqMeta,
+) {
+  const { new_password, ...rest } = body
+
+  if (new_password) {
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: new_password })
+    if (authError) throw new HttpError(400, { error: translateError(authError.message) })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('users').update({ ...rest, updated_at: new Date().toISOString() })
+    .eq('id', userId).select('*, team:teams(id, name)').single()
+  if (error) throw error
+
+  await logActivity({
+    userId,
+    action: new_password ? 'user.self_update+password' : 'user.self_update',
+    entityType: 'user',
+    entityId: userId,
+    description: `แก้ไขข้อมูลส่วนตัว${new_password ? ' (เปลี่ยนรหัสผ่าน)' : ''} (${data.email})`,
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent,
+  })
+
+  return data
+}
+
 export async function resetPassword(accessToken: string, newPassword: string, meta: ReqMeta) {
   const { data: userData, error: getErr } = await supabaseAdmin.auth.getUser(accessToken)
   if (getErr || !userData?.user) {

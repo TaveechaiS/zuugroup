@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Menu, PanelLeftClose, PanelLeftOpen, ExternalLink, LogOut, Globe } from 'lucide-react'
+import { Bell, Menu, PanelLeftClose, PanelLeftOpen, ExternalLink, LogOut, Globe, Settings } from 'lucide-react'
 import { notificationsApi } from '@/lib/api/services'
 import { currentUser, logout } from '@/lib/api/auth'
 import { useUI } from '@/lib/ui-context'
@@ -259,6 +259,13 @@ export default function TopBar({ title }: Props) {
                       {t('topbar.team')}: <span className="font-medium text-gray-900">{user.team.name}</span>
                     </div>
                   )}
+                  <button
+                    onClick={() => { setShowUser(false); router.push('/dashboard/settings') }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition border-b border-gray-100"
+                  >
+                    <Settings size={16} />
+                    {t('topbar.settings')}
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition"

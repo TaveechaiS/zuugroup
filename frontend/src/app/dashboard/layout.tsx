@@ -36,7 +36,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // because the backend enforces permissions.
     const segs = pathname.split('/').filter(Boolean)  // ['dashboard', '<role>', ...]
     const segRole = segs[1]
-    const isRoleRoot = segs.length === 2
+    // Shared, role-agnostic pages under /dashboard — never treated as a role root.
+    const SHARED_PAGES = new Set(['settings'])
+    const isRoleRoot = segs.length === 2 && !SHARED_PAGES.has(segRole)
 
     const stored = currentUser()
     if (stored) {

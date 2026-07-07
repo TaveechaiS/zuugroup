@@ -8,6 +8,7 @@ const router = Router()
 router.post('/login', asyncHandler(controller.login))
 router.post('/logout', requireAuth, asyncHandler(controller.logout))
 router.get('/me', requireAuth, controller.me)
+router.patch('/me', requireAuth, asyncHandler(controller.updateMe))
 router.post('/forgot-password', asyncHandler(controller.forgotPassword))
 router.post('/reset-password', asyncHandler(controller.resetPassword))
 

@@ -27,6 +27,19 @@ export function me(req: AuthenticatedRequest, res: Response) {
   res.json({ user: req.user })
 }
 
+const updateMeSchema = z.object({
+  first_name: z.string().min(1).optional(),
+  last_name: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  new_password: z.string().min(6, 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร').optional(),
+})
+
+export async function updateMe(req: AuthenticatedRequest, res: Response) {
+  const body = updateMeSchema.parse(req.body)
+  const data = await service.updateMe(req.user!.id, body, meta(req))
+  res.json({ user: data })
+}
+
 export async function forgotPassword(req: Request, res: Response) {
   const { email } = z.object({ email: z.string().email() }).parse(req.body)
   const frontendUrl =
