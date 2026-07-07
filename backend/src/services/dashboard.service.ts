@@ -1,18 +1,16 @@
 import { supabaseAdmin } from '../lib/supabase'
 import { getTeamMemberIds } from '../lib/access'
 
-const TH_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
-
 function aggregateMonthly(
   rows: Array<{ created_at: string; total_amount?: number | null; status?: string }>,
   months = 6,
 ) {
   const now = new Date()
-  const buckets: Array<{ key: string; month: string; orders: number; revenue: number }> = []
+  const buckets: Array<{ key: string; monthIdx: number; orders: number; revenue: number }> = []
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${d.getFullYear()}-${d.getMonth()}`
-    buckets.push({ key, month: TH_MONTHS_SHORT[d.getMonth()], orders: 0, revenue: 0 })
+    buckets.push({ key, monthIdx: d.getMonth(), orders: 0, revenue: 0 })
   }
   const map = new Map(buckets.map((b) => [b.key, b]))
   for (const r of rows) {
@@ -26,7 +24,7 @@ function aggregateMonthly(
       bucket.revenue += Number(r.total_amount)
     }
   }
-  return Array.from(map.values()).map((b) => ({ month: b.month, orders: b.orders, revenue: b.revenue }))
+  return Array.from(map.values()).map((b) => ({ monthIdx: b.monthIdx, orders: b.orders, revenue: b.revenue }))
 }
 
 function sixMonthsAgoIso(): string {
@@ -74,11 +72,11 @@ export async function adminStats() {
     statusMap[s] = (statusMap[s] ?? 0) + 1
   }
   const statusBreakdown = [
-    { name: 'รอตรวจสอบ', value: statusMap['pending_review'] ?? 0, color: '#f59e0b' },
-    { name: 'กำลังดำเนินการ', value: statusMap['processing'] ?? 0, color: '#3b82f6' },
-    { name: 'สำเร็จ', value: statusMap['completed'] ?? 0, color: '#10b981' },
-    { name: 'ไม่ผ่าน', value: statusMap['rejected'] ?? 0, color: '#ef4444' },
-    { name: 'ยกเลิก', value: statusMap['cancelled'] ?? 0, color: '#6b7280' },
+    { key: 'pending_review', value: statusMap['pending_review'] ?? 0, color: '#f59e0b' },
+    { key: 'processing', value: statusMap['processing'] ?? 0, color: '#3b82f6' },
+    { key: 'completed', value: statusMap['completed'] ?? 0, color: '#10b981' },
+    { key: 'rejected', value: statusMap['rejected'] ?? 0, color: '#ef4444' },
+    { key: 'cancelled', value: statusMap['cancelled'] ?? 0, color: '#6b7280' },
   ].filter((s) => s.value > 0)
 
   return {
@@ -129,10 +127,10 @@ export async function managerStats(teamId: string | null) {
     qStatusMap[s] = (qStatusMap[s] ?? 0) + 1
   }
   const statusBreakdown = [
-    { name: 'อนุมัติ', value: qStatusMap['approved'] ?? 0, color: '#10b981' },
-    { name: 'รออนุมัติ', value: qStatusMap['pending'] ?? 0, color: '#f59e0b' },
-    { name: 'ฉบับร่าง', value: qStatusMap['draft'] ?? 0, color: '#6b7280' },
-    { name: 'ไม่อนุมัติ', value: qStatusMap['rejected'] ?? 0, color: '#ef4444' },
+    { key: 'approved', value: qStatusMap['approved'] ?? 0, color: '#10b981' },
+    { key: 'pending', value: qStatusMap['pending'] ?? 0, color: '#f59e0b' },
+    { key: 'draft', value: qStatusMap['draft'] ?? 0, color: '#6b7280' },
+    { key: 'rejected', value: qStatusMap['rejected'] ?? 0, color: '#ef4444' },
   ].filter((s) => s.value > 0)
 
   return {
@@ -184,7 +182,7 @@ export async function cfoStats() {
   const topCustomers = Array.from(customerMap.values()).sort((a, b) => b.sales - a.sales).slice(0, 5)
 
   const monthlyAgg = aggregateMonthly(recentOrders ?? [], 6)
-  const monthlyData = monthlyAgg.map((m) => ({ month: m.month, sales: m.revenue, orders: m.orders }))
+  const monthlyData = monthlyAgg.map((m) => ({ monthIdx: m.monthIdx, sales: m.revenue, orders: m.orders }))
 
   return {
     stats: { quotationCount, orderCount, totalSales, customerCount: customerMap.size },

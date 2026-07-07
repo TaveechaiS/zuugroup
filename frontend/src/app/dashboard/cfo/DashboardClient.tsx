@@ -2,21 +2,26 @@
 
 import { DollarSign, FileText, ShoppingCart, Users } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   stats: { quotationCount: number; orderCount: number; totalSales: number; customerCount: number }
   topProducts: { name: string; quantity: number; sales: number }[]
   topCustomers: { name: string; sales: number }[]
-  monthlyData: { month: string; sales: number; orders?: number }[]
+  monthlyData: { monthIdx: number; sales: number; orders?: number }[]
   teams: { id: string; name: string }[]
 }
 
-export default function CFODashboardClient({ stats, topProducts, topCustomers, monthlyData, teams }: Props) {
+const MONTH_KEYS = ['month.jan','month.feb','month.mar','month.apr','month.may','month.jun','month.jul','month.aug','month.sep','month.oct','month.nov','month.dec']
+
+export default function CFODashboardClient({ stats, topProducts, topCustomers, monthlyData: monthlyRaw, teams }: Props) {
+  const { t } = useLanguage()
+  const monthlyData = monthlyRaw.map((m) => ({ ...m, month: t(MONTH_KEYS[m.monthIdx]) }))
   const cards = [
-    { label: 'ยอดขายรวม', value: `฿${stats.totalSales.toLocaleString()}`, icon: <DollarSign size={20} />, color: 'bg-green-50 text-green-600' },
-    { label: 'คำสั่งซื้อ', value: stats.orderCount, icon: <ShoppingCart size={20} />, color: 'bg-blue-50 text-blue-600' },
-    { label: 'ใบเสนอราคา', value: stats.quotationCount, icon: <FileText size={20} />, color: 'bg-purple-50 text-purple-600' },
-    { label: 'จำนวนลูกค้า', value: stats.customerCount, icon: <Users size={20} />, color: 'bg-orange-50 text-orange-600' },
+    { label: t('dashboard.stat.total_sales'), value: `฿${stats.totalSales.toLocaleString()}`, icon: <DollarSign size={20} />, color: 'bg-green-50 text-green-600' },
+    { label: t('dashboard.stat.orders'), value: stats.orderCount, icon: <ShoppingCart size={20} />, color: 'bg-blue-50 text-blue-600' },
+    { label: t('dashboard.stat.quotations'), value: stats.quotationCount, icon: <FileText size={20} />, color: 'bg-purple-50 text-purple-600' },
+    { label: t('dashboard.stat.customer_count'), value: stats.customerCount, icon: <Users size={20} />, color: 'bg-orange-50 text-orange-600' },
   ]
 
   return (
@@ -39,15 +44,15 @@ export default function CFODashboardClient({ stats, topProducts, topCustomers, m
       {/* Monthly sales */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">ยอดขายรายเดือน (6 เดือนล่าสุด)</h3>
-          {!monthlyData.some((m) => m.sales > 0) && <span className="text-xs text-gray-400">ยังไม่มียอดขาย</span>}
+          <h3 className="font-semibold text-gray-900">{t('dashboard.chart.monthly_revenue')}</h3>
+          {!monthlyData.some((m) => m.sales > 0) && <span className="text-xs text-gray-400">{t('dashboard.empty.no_sales')}</span>}
         </div>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
-            <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, 'ยอดขาย']} />
+            <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, t('dashboard.chart.tooltip_sales')]} />
             <Line type="monotone" dataKey="sales" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
@@ -56,13 +61,13 @@ export default function CFODashboardClient({ stats, topProducts, topCustomers, m
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top products */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">สินค้าขายดี Top 5</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('dashboard.section.top_products')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={topProducts} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, 'ยอดขาย']} />
+              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, t('dashboard.chart.tooltip_sales')]} />
               <Bar dataKey="sales" fill="#2563EB" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -70,7 +75,7 @@ export default function CFODashboardClient({ stats, topProducts, topCustomers, m
 
         {/* Top customers */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">ลูกค้าที่ซื้อสูงสุด Top 5</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('dashboard.section.top_customers')}</h3>
           <div className="space-y-3">
             {topCustomers.map((c, idx) => (
               <div key={c.name} className="flex items-center gap-3">
@@ -83,19 +88,19 @@ export default function CFODashboardClient({ stats, topProducts, topCustomers, m
                 <p className="font-semibold text-gray-900 text-sm">฿{c.sales.toLocaleString()}</p>
               </div>
             ))}
-            {topCustomers.length === 0 && <p className="text-center text-gray-400 text-sm py-6">ยังไม่มีข้อมูล</p>}
+            {topCustomers.length === 0 && <p className="text-center text-gray-400 text-sm py-6">{t('common.no_data_generic')}</p>}
           </div>
         </div>
       </div>
 
       {/* Team performance placeholder */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">ผลงานแต่ละทีม</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">{t('dashboard.section.team_performance')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {teams.map((t) => (
-            <div key={t.id} className="border border-gray-100 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-900">{t.name}</p>
-              <p className="text-xs text-gray-500 mt-1">ดูรายงานละเอียดในหน้ารายงาน</p>
+          {teams.map((team) => (
+            <div key={team.id} className="border border-gray-100 rounded-lg p-3">
+              <p className="text-sm font-medium text-gray-900">{team.name}</p>
+              <p className="text-xs text-gray-500 mt-1">{t('dashboard.team_hint')}</p>
             </div>
           ))}
         </div>

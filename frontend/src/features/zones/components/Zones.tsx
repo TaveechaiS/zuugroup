@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, MapPin, X } from 'lucide-react'
 import { zonesApi } from '@/features/zones/api'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   zones: any[]
@@ -14,6 +15,7 @@ interface Props {
 const empty = { code: '', name: '', region: '', province: '', description: '' }
 
 export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
+  const { t } = useLanguage()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState(empty)
@@ -34,12 +36,12 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
       else await zonesApi.create(form)
       setShowForm(false); onReload()
     } catch (err: any) {
-      setError(err.message || 'บันทึกไม่สำเร็จ')
+      setError(err.message || t('cf.save_failed'))
     } finally { setSaving(false) }
   }
 
   const remove = async (z: any) => {
-    if (!confirm(`ลบเขตการขาย "${z.code} - ${z.name}"?`)) return
+    if (!confirm(t('zones.confirm_delete').replace('{code}', z.code).replace('{name}', z.name))) return
     try {
       await zonesApi.remove(z.id); onReload()
     } catch (err: any) { alert(err.message) }
@@ -49,9 +51,9 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-xl border border-gray-100">
         <div className="flex items-center gap-3 p-5 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">เขตการขาย ({zones.length})</h2>
+          <h2 className="font-semibold text-gray-900">{t('zones.title')} ({zones.length})</h2>
           <button onClick={startAdd} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
-            <Plus size={14} /> เพิ่มเขต
+            <Plus size={14} /> {t('zones.add')}
           </button>
         </div>
 
@@ -59,11 +61,11 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
           <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
-                <th className="text-left px-5 py-3">รหัส</th>
-                <th className="text-left px-5 py-3">ชื่อเขต</th>
-                <th className="text-left px-5 py-3">จังหวัด</th>
-                <th className="text-left px-5 py-3">ภาค</th>
-                <th className="text-center px-5 py-3">จัดการ</th>
+                <th className="text-left px-5 py-3">{t('zones.col.code')}</th>
+                <th className="text-left px-5 py-3">{t('zones.col.name')}</th>
+                <th className="text-left px-5 py-3">{t('zones.col.province')}</th>
+                <th className="text-left px-5 py-3">{t('zones.col.region')}</th>
+                <th className="text-center px-5 py-3">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -82,12 +84,12 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-center gap-1">
                       {canEdit && (
-                        <button onClick={() => startEdit(z)} className="text-gray-400 hover:text-blue-600 p-1.5" title="แก้ไข">
+                        <button onClick={() => startEdit(z)} className="text-gray-400 hover:text-blue-600 p-1.5" title={t('common.edit')}>
                           <Edit2 size={15} />
                         </button>
                       )}
                       {canDelete && (
-                        <button onClick={() => remove(z)} className="text-gray-400 hover:text-red-600 p-1.5" title="ลบ">
+                        <button onClick={() => remove(z)} className="text-gray-400 hover:text-red-600 p-1.5" title={t('common.delete')}>
                           <Trash2 size={15} />
                         </button>
                       )}
@@ -97,7 +99,7 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
                 </tr>
               ))}
               {zones.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-gray-400">ยังไม่มีเขตการขาย — กด "เพิ่มเขต" เพื่อสร้าง</td></tr>
+                <tr><td colSpan={5} className="text-center py-10 text-gray-400">{t('zones.empty')}</td></tr>
               )}
             </tbody>
           </table>
@@ -108,53 +110,53 @@ export default function Zones({ zones, canEdit, canDelete, onReload }: Props) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">{editing ? 'แก้ไขเขตการขาย' : 'เพิ่มเขตการขายใหม่'}</h3>
+              <h3 className="font-semibold text-gray-900">{editing ? t('zones.edit') : t('zones.add_new')}</h3>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
             <form onSubmit={save} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสเขต <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('zones.field.code')} <span className="text-red-500">*</span></label>
                 <input required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  placeholder="เช่น BKK, CNX, S-01"
+                  placeholder={t('zones.placeholder.code')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อเขต <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('zones.field.name')} <span className="text-red-500">*</span></label>
                 <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="เช่น กรุงเทพและปริมณฑล"
+                  placeholder={t('zones.placeholder.name')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">จังหวัด</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('zones.field.province')}</label>
                   <input value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })}
-                    placeholder="เช่น กรุงเทพมหานคร"
+                    placeholder={t('zones.placeholder.province')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ภาค</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('zones.field.region')}</label>
                   <select value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- ไม่ระบุ --</option>
-                    <option>ภาคกลาง</option>
-                    <option>ภาคเหนือ</option>
-                    <option>ภาคใต้</option>
-                    <option>ภาคตะวันออก</option>
-                    <option>ภาคตะวันออกเฉียงเหนือ</option>
-                    <option>ภาคตะวันตก</option>
+                    <option value="">{t('common.optional')}</option>
+                    <option value="ภาคกลาง">{t('zones.region.central')}</option>
+                    <option value="ภาคเหนือ">{t('zones.region.north')}</option>
+                    <option value="ภาคใต้">{t('zones.region.south')}</option>
+                    <option value="ภาคตะวันออก">{t('zones.region.east')}</option>
+                    <option value="ภาคตะวันออกเฉียงเหนือ">{t('zones.region.northeast')}</option>
+                    <option value="ภาคตะวันตก">{t('zones.region.west')}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('zones.field.description')}</label>
                 <textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">ยกเลิก</button>
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t('common.cancel')}</button>
                 <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium">
-                  {saving ? 'กำลังบันทึก…' : 'บันทึก'}
+                  {saving ? t('common.saving_dots') : t('common.save')}
                 </button>
               </div>
             </form>

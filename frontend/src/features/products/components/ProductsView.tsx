@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Search, X, Package, Calendar, Tag, Layers, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 type SortKey = 'product_code' | 'quantity' | 'price_per_unit' | 'status'
 type SortDir = 'asc' | 'desc'
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function ProductsView({ products }: Props) {
+  const { t, lang } = useLanguage()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [viewing, setViewing] = useState<any>(null)
@@ -52,8 +54,8 @@ export default function ProductsView({ products }: Props) {
       return sortDir === 'asc' ? av - bv : bv - av
     }
     return sortDir === 'asc'
-      ? String(av).localeCompare(String(bv), 'th')
-      : String(bv).localeCompare(String(av), 'th')
+      ? String(av).localeCompare(String(bv), lang)
+      : String(bv).localeCompare(String(av), lang)
   }) : filtered
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
@@ -68,7 +70,7 @@ export default function ProductsView({ products }: Props) {
             <input
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder="ค้นหาสินค้า..."
+              placeholder={t('common.search_products')}
               className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 w-64"
             />
           </div>
@@ -77,23 +79,23 @@ export default function ProductsView({ products }: Props) {
             onChange={(e) => { setCategory(e.target.value); setPage(1) }}
             className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">หมวดหมู่ทั้งหมด</option>
+            <option value="">{t('common.all_categories')}</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          <p className="ml-auto text-sm text-gray-500">{filtered.length} รายการ</p>
+          <p className="ml-auto text-sm text-gray-500">{filtered.length} {t('common.records')}</p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>รหัส<SortIcon k="product_code" /></th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">ชื่อสินค้า</th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">หมวดหมู่</th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>คงเหลือ<SortIcon k="quantity" /></th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>ราคา/หน่วย<SortIcon k="price_per_unit" /></th>
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">หน่วย</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>สถานะ<SortIcon k="status" /></th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('product_code')}>{t('products.col.code')}<SortIcon k="product_code" /></th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('products.col.name')}</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('products.col.category')}</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('quantity')}>{t('products.col.stock')}<SortIcon k="quantity" /></th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('price_per_unit')}>{t('products.col.price')}<SortIcon k="price_per_unit" /></th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">{t('products.col.unit')}</th>
+                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase cursor-pointer select-none hover:text-blue-600" onClick={() => toggleSort('status')}>{t('products.col.status')}<SortIcon k="status" /></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -125,13 +127,13 @@ export default function ProductsView({ products }: Props) {
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       p.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
-                      {p.status === 'available' ? 'พร้อมขาย' : 'ไม่พร้อมขาย'}
+                      {p.status === 'available' ? t('products.status.available') : t('products.status.unavailable')}
                     </span>
                   </td>
                 </tr>
               ))}
               {paginated.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-10 text-gray-400">ไม่พบข้อมูล</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-gray-400">{t('common.no_data')}</td></tr>
               )}
             </tbody>
           </table>
@@ -139,7 +141,7 @@ export default function ProductsView({ products }: Props) {
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 text-sm text-gray-600">
-            <span>แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} จาก {filtered.length} รายการ</span>
+            <span>{t('common.showing')} {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} {t('common.of')} {filtered.length} {t('common.records')}</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -175,6 +177,7 @@ export default function ProductsView({ products }: Props) {
 }
 
 function ProductDetailModal({ product, onClose }: { product: any; onClose: () => void }) {
+  const { t, lang } = useLanguage()
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -186,7 +189,7 @@ function ProductDetailModal({ product, onClose }: { product: any; onClose: () =>
             <div className="min-w-0">
               <p className="font-mono text-xs text-blue-700">{product.product_code ?? '—'}</p>
               <h3 className="font-semibold text-gray-900 text-base truncate">{product.name}</h3>
-              <p className="text-xs text-gray-500 mt-0.5">{product.category?.name ?? 'ไม่ระบุหมวด'}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{product.category?.name ?? t('products.no_category')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 shrink-0">
@@ -205,36 +208,36 @@ function ProductDetailModal({ product, onClose }: { product: any; onClose: () =>
               ) : (
                 <div className="w-full aspect-square bg-gray-50 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-gray-300 gap-2">
                   <ImageIcon size={48} />
-                  <p className="text-xs">ไม่มีรูปสินค้า</p>
+                  <p className="text-xs">{t('products.no_image')}</p>
                 </div>
               )}
             </div>
 
             <div className="space-y-3">
-              <InfoBlock icon={<Layers size={14} />} label="คงเหลือในสต๊อก">
+              <InfoBlock icon={<Layers size={14} />} label={t('products.stock_left')}>
                 <span className={`text-lg font-semibold ${product.quantity < 10 ? 'text-red-600' : 'text-gray-900'}`}>
                   {product.quantity} {product.unit ?? ''}
                 </span>
                 {product.quantity < 10 && product.quantity > 0 && (
-                  <span className="ml-2 text-xs text-red-600">⚠ ใกล้หมด</span>
+                  <span className="ml-2 text-xs text-red-600">{t('products.low_stock')}</span>
                 )}
                 {product.quantity === 0 && (
-                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">หมดสต๊อก</span>
+                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">{t('products.out_of_stock')}</span>
                 )}
               </InfoBlock>
 
-              <InfoBlock icon={<Tag size={14} />} label="ราคาขายต่อหน่วย">
+              <InfoBlock icon={<Tag size={14} />} label={t('products.sale_price_per')}>
                 <span className="text-lg font-semibold text-blue-700">
                   ฿{product.price_per_unit?.toLocaleString()}
                 </span>
-                <span className="ml-2 text-xs text-gray-500">/ {product.unit ?? 'หน่วย'}</span>
+                <span className="ml-2 text-xs text-gray-500">/ {product.unit ?? t('products.unit_label')}</span>
               </InfoBlock>
 
-              <InfoBlock label="สถานะ">
+              <InfoBlock label={t('products.col.status')}>
                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   product.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  {product.status === 'available' ? 'พร้อมขาย' : 'ไม่พร้อมขาย'}
+                  {product.status === 'available' ? t('products.status.available') : t('products.status.unavailable')}
                 </span>
               </InfoBlock>
             </div>
@@ -243,26 +246,26 @@ function ProductDetailModal({ product, onClose }: { product: any; onClose: () =>
           {(product.lot_number || product.manufacture_date || product.expiry_date) && (
             <div className="bg-gray-50 rounded-xl p-4">
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Calendar size={12} /> ข้อมูลล็อต / วันที่
+                <Calendar size={12} /> {t('products.lot_dates')}
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 {product.lot_number && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">เลขล็อต</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t('products.lot_no')}</p>
                     <p className="font-mono text-gray-900">{product.lot_number}</p>
                   </div>
                 )}
                 {product.manufacture_date && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">วันผลิต</p>
-                    <p className="text-gray-900">{new Date(product.manufacture_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t('products.mfg_date')}</p>
+                    <p className="text-gray-900">{new Date(product.manufacture_date).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   </div>
                 )}
                 {product.expiry_date && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">วันหมดอายุ</p>
+                    <p className="text-xs text-gray-500 mb-0.5">{t('products.exp_date')}</p>
                     <p className={`${isNearExpiry(product.expiry_date) ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>
-                      {new Date(product.expiry_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(product.expiry_date).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                       {isNearExpiry(product.expiry_date) && <span className="ml-1 text-xs">⚠</span>}
                     </p>
                   </div>
@@ -272,12 +275,12 @@ function ProductDetailModal({ product, onClose }: { product: any; onClose: () =>
           )}
 
           <div className="text-xs text-gray-400">
-            อัปเดตล่าสุด {new Date(product.updated_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {t('products.updated_at')} {new Date(product.updated_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
 
         <div className="flex justify-end px-6 py-3 border-t border-gray-100 bg-gray-50">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">ปิด</button>
+          <button onClick={onClose} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">{t('common.close')}</button>
         </div>
       </div>
     </div>

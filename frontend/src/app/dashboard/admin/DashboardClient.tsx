@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
 import { Users, Building2, Package, UsersRound, ShoppingCart, AlertTriangle, Clock, UserPlus } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   stats: {
@@ -14,26 +15,29 @@ interface Props {
     pendingCustomerRequests: number
     lowStockProducts: any[]
     recentOrders: any[]
-    monthlyData?: { month: string; orders: number; revenue: number }[]
-    statusBreakdown?: { name: string; value: number; color: string }[]
+    monthlyData?: { monthIdx: number; orders: number; revenue: number }[]
+    statusBreakdown?: { key: string; value: number; color: string }[]
   }
 }
 
+const MONTH_KEYS = ['month.jan','month.feb','month.mar','month.apr','month.may','month.jun','month.jul','month.aug','month.sep','month.oct','month.nov','month.dec']
+
 export default function AdminDashboardClient({ stats }: Props) {
-  const monthlyData = stats.monthlyData ?? []
-  const statusBreakdown = stats.statusBreakdown ?? []
+  const { t } = useLanguage()
+  const monthlyData = (stats.monthlyData ?? []).map((m) => ({ ...m, month: t(MONTH_KEYS[m.monthIdx]) }))
+  const statusBreakdown = (stats.statusBreakdown ?? []).map((s) => ({ ...s, name: t(`status.${s.key}`) }))
   const hasMonthlyData = monthlyData.some((m) => m.orders > 0 || m.revenue > 0)
   const hasStatusData = statusBreakdown.length > 0
 
   const statCards = [
-    { label: 'ผู้ใช้ทั้งหมด', value: stats.userCount, icon: <Users size={20} />, color: 'blue', href: '/dashboard/admin/users' },
-    { label: 'ลูกค้า', value: stats.customerCount, icon: <Building2 size={20} />, color: 'green', href: '/dashboard/admin/customers' },
-    { label: 'สินค้า', value: stats.productCount, icon: <Package size={20} />, color: 'purple', href: '/dashboard/admin/products' },
-    { label: 'ทีมทั้งหมด', value: stats.teamCount, icon: <UsersRound size={20} />, color: 'orange', href: '/dashboard/admin/teams' },
-    { label: 'คำสั่งซื้อทั้งหมด', value: stats.orderCount, icon: <ShoppingCart size={20} />, color: 'indigo', href: '/dashboard/admin/orders' },
-    { label: 'รอดำเนินการ', value: stats.pendingOrderCount, icon: <Clock size={20} />, color: 'yellow', href: '/dashboard/admin/orders?status=pending_review' },
-    { label: 'คำขอเพิ่มลูกค้า', value: stats.pendingCustomerRequests, icon: <UserPlus size={20} />, color: 'pink', href: '/dashboard/admin/customer-requests' },
-    { label: 'สินค้าใกล้หมด', value: stats.lowStockProducts.length, icon: <AlertTriangle size={20} />, color: 'red', href: '/dashboard/admin/products?low_stock=true' },
+    { label: t('dashboard.stat.total_users'), value: stats.userCount, icon: <Users size={20} />, color: 'blue', href: '/dashboard/admin/users' },
+    { label: t('dashboard.stat.customers'), value: stats.customerCount, icon: <Building2 size={20} />, color: 'green', href: '/dashboard/admin/customers' },
+    { label: t('dashboard.stat.products'), value: stats.productCount, icon: <Package size={20} />, color: 'purple', href: '/dashboard/admin/products' },
+    { label: t('dashboard.stat.total_teams'), value: stats.teamCount, icon: <UsersRound size={20} />, color: 'orange', href: '/dashboard/admin/teams' },
+    { label: t('dashboard.stat.total_orders'), value: stats.orderCount, icon: <ShoppingCart size={20} />, color: 'indigo', href: '/dashboard/admin/orders' },
+    { label: t('dashboard.stat.pending'), value: stats.pendingOrderCount, icon: <Clock size={20} />, color: 'yellow', href: '/dashboard/admin/orders?status=pending_review' },
+    { label: t('dashboard.stat.customer_reqs'), value: stats.pendingCustomerRequests, icon: <UserPlus size={20} />, color: 'pink', href: '/dashboard/admin/customer-requests' },
+    { label: t('dashboard.stat.low_stock'), value: stats.lowStockProducts.length, icon: <AlertTriangle size={20} />, color: 'red', href: '/dashboard/admin/products?low_stock=true' },
   ]
 
   const colorMap: Record<string, string> = {
@@ -48,11 +52,11 @@ export default function AdminDashboardClient({ stats }: Props) {
   }
 
   const statusLabel: Record<string, { label: string; color: string }> = {
-    draft: { label: 'ร่าง', color: 'bg-gray-100 text-gray-600' },
-    pending_review: { label: 'รอตรวจสอบ', color: 'bg-yellow-100 text-yellow-700' },
-    processing: { label: 'ดำเนินการ', color: 'bg-blue-100 text-blue-700' },
-    completed: { label: 'เสร็จสิ้น', color: 'bg-green-100 text-green-700' },
-    rejected: { label: 'ไม่ผ่าน', color: 'bg-red-100 text-red-700' },
+    draft: { label: t('status.draft'), color: 'bg-gray-100 text-gray-600' },
+    pending_review: { label: t('status.pending_review'), color: 'bg-yellow-100 text-yellow-700' },
+    processing: { label: t('status.processing'), color: 'bg-blue-100 text-blue-700' },
+    completed: { label: t('status.completed'), color: 'bg-green-100 text-green-700' },
+    rejected: { label: t('status.rejected'), color: 'bg-red-100 text-red-700' },
   }
 
   return (
@@ -81,15 +85,15 @@ export default function AdminDashboardClient({ stats }: Props) {
         {/* Revenue Line Chart */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">ยอดขายรายเดือน (6 เดือนล่าสุด)</h3>
-            {!hasMonthlyData && <span className="text-xs text-gray-400">ยังไม่มีคำสั่งซื้อ</span>}
+            <h3 className="font-semibold text-gray-900">{t('dashboard.chart.monthly_revenue')}</h3>
+            {!hasMonthlyData && <span className="text-xs text-gray-400">{t('dashboard.empty.no_orders')}</span>}
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
-              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, 'ยอดขาย']} />
+              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, t('dashboard.chart.tooltip_sales')]} />
               <Line type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -98,15 +102,15 @@ export default function AdminDashboardClient({ stats }: Props) {
         {/* Orders Bar Chart */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">จำนวนคำสั่งซื้อรายเดือน</h3>
-            {!hasMonthlyData && <span className="text-xs text-gray-400">ยังไม่มีคำสั่งซื้อ</span>}
+            <h3 className="font-semibold text-gray-900">{t('dashboard.chart.monthly_orders')}</h3>
+            {!hasMonthlyData && <span className="text-xs text-gray-400">{t('dashboard.empty.no_orders')}</span>}
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-              <Tooltip formatter={(v: number) => [v, 'คำสั่งซื้อ']} />
+              <Tooltip formatter={(v: number) => [v, t('dashboard.chart.tooltip_orders')]} />
               <Bar dataKey="orders" fill="#2563EB" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -116,7 +120,7 @@ export default function AdminDashboardClient({ stats }: Props) {
       {/* Status Breakdown */}
       {hasStatusData && (
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">สถานะคำสั่งซื้อ</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('dashboard.chart.order_status')}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -146,12 +150,12 @@ export default function AdminDashboardClient({ stats }: Props) {
         {/* Recent Orders */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">คำสั่งซื้อล่าสุด</h3>
-            <a href="/dashboard/admin/orders" className="text-sm text-blue-600 hover:underline">ดูทั้งหมด</a>
+            <h3 className="font-semibold text-gray-900">{t('dashboard.section.recent_orders')}</h3>
+            <a href="/dashboard/admin/orders" className="text-sm text-blue-600 hover:underline">{t('common.view_all')}</a>
           </div>
           <div className="space-y-3">
             {stats.recentOrders.length === 0 && (
-              <p className="text-sm text-gray-400 py-4 text-center">ยังไม่มีคำสั่งซื้อ</p>
+              <p className="text-sm text-gray-400 py-4 text-center">{t('dashboard.empty.no_orders')}</p>
             )}
             {stats.recentOrders.map((order: any) => (
               <div key={order.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -173,19 +177,19 @@ export default function AdminDashboardClient({ stats }: Props) {
         {/* Low Stock Products */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">สินค้าใกล้หมด</h3>
-            <a href="/dashboard/admin/products?low_stock=true" className="text-sm text-blue-600 hover:underline">ดูทั้งหมด</a>
+            <h3 className="font-semibold text-gray-900">{t('dashboard.section.low_stock')}</h3>
+            <a href="/dashboard/admin/products?low_stock=true" className="text-sm text-blue-600 hover:underline">{t('common.view_all')}</a>
           </div>
           <div className="space-y-3">
             {stats.lowStockProducts.length === 0 && (
-              <p className="text-sm text-gray-400 py-4 text-center">สินค้าทุกชิ้นมีพอ</p>
+              <p className="text-sm text-gray-400 py-4 text-center">{t('dashboard.empty.all_in_stock')}</p>
             )}
             {stats.lowStockProducts.slice(0, 5).map((p: any) => (
               <div key={p.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                 <p className="text-sm text-gray-900">{p.name}</p>
                 <div className="flex items-center gap-2">
                   <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.quantity <= 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {p.quantity <= 0 ? 'หมด' : `เหลือ ${p.quantity} ${p.unit ?? ''}`}
+                    {p.quantity <= 0 ? t('dashboard.stock.out') : `${t('dashboard.stock.left')} ${p.quantity} ${p.unit ?? ''}`}
                   </div>
                 </div>
               </div>

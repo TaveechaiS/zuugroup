@@ -8,10 +8,6 @@ import { currentUser, logout } from '@/lib/api/auth'
 import { useUI } from '@/lib/ui-context'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'ผู้ดูแลระบบ', manager: 'ผู้จัดการทีม', sales: 'พนักงานขาย', cfo: 'ผู้บริหาร',
-}
-
 const LANG_LABELS: Record<string, string> = { th: 'ไทย', en: 'English' }
 
 interface Props { title: string }
@@ -67,7 +63,7 @@ export default function TopBar({ title }: Props) {
   const [role, setRole] = useState<string | undefined>(undefined)
   const [user, setUser] = useState<any>(null)
   const { openMobileSidebar, sidebarCollapsed, toggleSidebar } = useUI()
-  const { lang, setLang } = useLanguage()
+  const { lang, setLang, t } = useLanguage()
 
   useEffect(() => {
     const u = currentUser()
@@ -127,7 +123,7 @@ export default function TopBar({ title }: Props) {
       <button
         onClick={openMobileSidebar}
         className="lg:hidden p-1.5 hover:bg-gray-100 rounded-lg shrink-0"
-        aria-label="เปิดเมนู"
+        aria-label={t('topbar.open_menu')}
       >
         <Menu size={20} className="text-gray-600" />
       </button>
@@ -136,8 +132,8 @@ export default function TopBar({ title }: Props) {
       <button
         onClick={toggleSidebar}
         className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 shrink-0"
-        aria-label={sidebarCollapsed ? 'ขยายเมนู' : 'ย่อเมนู'}
-        title={sidebarCollapsed ? 'ขยายเมนู' : 'ย่อเมนู'}
+        aria-label={sidebarCollapsed ? t('topbar.expand_menu') : t('topbar.collapse_menu')}
+        title={sidebarCollapsed ? t('topbar.expand_menu') : t('topbar.collapse_menu')}
       >
         {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
       </button>
@@ -149,7 +145,7 @@ export default function TopBar({ title }: Props) {
           <button
             onClick={() => setShowNotif(!showNotif)}
             className="relative p-2 rounded-lg hover:bg-gray-100"
-            aria-label="การแจ้งเตือน"
+            aria-label={t('topbar.notifications')}
           >
             <Bell size={18} className="text-gray-600" />
             {unreadCount > 0 && (
@@ -164,13 +160,13 @@ export default function TopBar({ title }: Props) {
               <div className="fixed inset-0 z-40" onClick={() => setShowNotif(false)} />
             <div className="absolute right-0 top-12 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
               <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 text-sm">การแจ้งเตือน</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">{t('topbar.notifications')}</h3>
                 {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-blue-600 hover:underline">อ่านทั้งหมด</button>
+                  <button onClick={markAllRead} className="text-xs text-blue-600 hover:underline">{t('topbar.mark_all_read')}</button>
                 )}
               </div>
               {notifications.length === 0 ? (
-                <p className="p-6 text-center text-sm text-gray-400">ไม่มีการแจ้งเตือน</p>
+                <p className="p-6 text-center text-sm text-gray-400">{t('topbar.no_notifications')}</p>
               ) : (
                 <div className="divide-y divide-gray-50">
                   {notifications.map((n) => {
@@ -193,9 +189,9 @@ export default function TopBar({ title }: Props) {
                             <p className="text-xs text-gray-600 mt-0.5 break-words">{n.message}</p>
                             <div className="flex items-center justify-between mt-1">
                               <p className="text-[10px] text-gray-400">
-                                {new Date(n.created_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                {new Date(n.created_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                               </p>
-                              {clickable && <p className="text-[10px] text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition">กดเพื่อดู →</p>}
+                              {clickable && <p className="text-[10px] text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition">{t('topbar.click_to_view')}</p>}
                             </div>
                           </div>
                           {!n.is_read && <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />}
@@ -213,8 +209,8 @@ export default function TopBar({ title }: Props) {
         <button
           onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition text-gray-600"
-          aria-label="เปลี่ยนภาษา"
-          title="เปลี่ยนภาษา"
+          aria-label={t('topbar.change_language')}
+          title={t('topbar.change_language')}
         >
           <Globe size={18} />
           <span className="hidden sm:inline text-xs font-medium">{LANG_LABELS[lang]}</span>
@@ -225,7 +221,7 @@ export default function TopBar({ title }: Props) {
             <button
               onClick={() => setShowUser(!showUser)}
               className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
-              aria-label="เมนูผู้ใช้"
+              aria-label={t('topbar.user_menu')}
             >
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
                 {user.first_name?.[0]}{user.last_name?.[0]}
@@ -253,14 +249,14 @@ export default function TopBar({ title }: Props) {
                       <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       {role && (
                         <p className="text-[10px] text-blue-600 font-medium mt-0.5">
-                          {ROLE_LABELS[role] ?? role}
+                          {t(`role.${role}`)}
                         </p>
                       )}
                     </div>
                   </div>
                   {(role === 'sales' || role === 'manager') && user.team?.name && (
                     <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-600">
-                      ทีม: <span className="font-medium text-gray-900">{user.team.name}</span>
+                      {t('topbar.team')}: <span className="font-medium text-gray-900">{user.team.name}</span>
                     </div>
                   )}
                   <button
@@ -268,7 +264,7 @@ export default function TopBar({ title }: Props) {
                     className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition"
                   >
                     <LogOut size={16} />
-                    ออกจากระบบ
+                    {t('topbar.logout')}
                   </button>
                 </div>
               </>

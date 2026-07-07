@@ -2,6 +2,7 @@
 
 import { FileText, ShoppingCart, Clock, AlertCircle, DollarSign } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   stats: {
@@ -11,23 +12,26 @@ interface Props {
     pendingOrders: number
     rejectedCount: number
     totalSales: number
-    monthlyData?: { month: string; orders: number; revenue: number }[]
-    statusBreakdown?: { name: string; value: number; color: string }[]
+    monthlyData?: { monthIdx: number; orders: number; revenue: number }[]
+    statusBreakdown?: { key: string; value: number; color: string }[]
   }
 }
 
+const MONTH_KEYS = ['month.jan','month.feb','month.mar','month.apr','month.may','month.jun','month.jul','month.aug','month.sep','month.oct','month.nov','month.dec']
+
 export default function ManagerDashboardClient({ stats }: Props) {
-  const monthlyData = (stats.monthlyData ?? []).map((m) => ({ month: m.month, sales: m.revenue }))
-  const statusData = stats.statusBreakdown ?? []
+  const { t } = useLanguage()
+  const monthlyData = (stats.monthlyData ?? []).map((m) => ({ month: t(MONTH_KEYS[m.monthIdx]), sales: m.revenue }))
+  const statusData = (stats.statusBreakdown ?? []).map((s) => ({ ...s, name: t(`status.${s.key}`) }))
   const hasMonthly = monthlyData.some((m) => m.sales > 0)
   const hasStatus = statusData.length > 0
   const cards = [
-    { label: 'ใบเสนอราคาทั้งหมด', value: stats.teamQuotationCount, icon: <FileText size={20} />, color: 'bg-blue-50 text-blue-600' },
-    { label: 'คำสั่งซื้อทั้งหมด', value: stats.teamOrderCount, icon: <ShoppingCart size={20} />, color: 'bg-purple-50 text-purple-600' },
-    { label: 'รออนุมัติ', value: stats.pendingQuotations, icon: <Clock size={20} />, color: 'bg-yellow-50 text-yellow-600' },
-    { label: 'รอตรวจสอบ', value: stats.pendingOrders, icon: <AlertCircle size={20} />, color: 'bg-orange-50 text-orange-600' },
-    { label: 'ถูกปฏิเสธ', value: stats.rejectedCount, icon: <AlertCircle size={20} />, color: 'bg-red-50 text-red-600' },
-    { label: 'ยอดขายทีม', value: `฿${stats.totalSales.toLocaleString()}`, icon: <DollarSign size={20} />, color: 'bg-green-50 text-green-600' },
+    { label: t('dashboard.stat.total_quotations'), value: stats.teamQuotationCount, icon: <FileText size={20} />, color: 'bg-blue-50 text-blue-600' },
+    { label: t('dashboard.stat.total_orders'), value: stats.teamOrderCount, icon: <ShoppingCart size={20} />, color: 'bg-purple-50 text-purple-600' },
+    { label: t('dashboard.stat.pending_approval'), value: stats.pendingQuotations, icon: <Clock size={20} />, color: 'bg-yellow-50 text-yellow-600' },
+    { label: t('dashboard.stat.pending_review'), value: stats.pendingOrders, icon: <AlertCircle size={20} />, color: 'bg-orange-50 text-orange-600' },
+    { label: t('dashboard.stat.rejected'), value: stats.rejectedCount, icon: <AlertCircle size={20} />, color: 'bg-red-50 text-red-600' },
+    { label: t('dashboard.stat.team_sales'), value: `฿${stats.totalSales.toLocaleString()}`, icon: <DollarSign size={20} />, color: 'bg-green-50 text-green-600' },
   ]
 
   return (
@@ -49,22 +53,22 @@ export default function ManagerDashboardClient({ stats }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl border border-gray-100 p-5 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">ยอดขายของทีม (6 เดือนล่าสุด)</h3>
-            {!hasMonthly && <span className="text-xs text-gray-400">ยังไม่มียอดขาย</span>}
+            <h3 className="font-semibold text-gray-900">{t('dashboard.chart.team_sales')}</h3>
+            {!hasMonthly && <span className="text-xs text-gray-400">{t('dashboard.empty.no_sales')}</span>}
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
-              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, 'ยอดขาย']} />
+              <Tooltip formatter={(v: number) => [`฿${v.toLocaleString()}`, t('dashboard.chart.tooltip_sales')]} />
               <Line type="monotone" dataKey="sales" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">สถานะใบเสนอราคา</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('dashboard.chart.quotation_status')}</h3>
           {hasStatus ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
@@ -88,7 +92,7 @@ export default function ManagerDashboardClient({ stats }: Props) {
               </div>
             </>
           ) : (
-            <div className="text-center text-gray-400 text-sm py-12">ยังไม่มีใบเสนอราคา</div>
+            <div className="text-center text-gray-400 text-sm py-12">{t('dashboard.empty.no_quotations')}</div>
           )}
         </div>
       </div>

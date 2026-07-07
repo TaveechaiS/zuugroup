@@ -6,6 +6,7 @@ import { Upload, X } from 'lucide-react'
 import { customersApi } from '@/features/customers/api'
 import { customerRequestsApi } from '@/features/customerRequests/api'
 import { zonesApi } from '@/features/zones/api'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Props {
   mode: 'create' | 'request' | 'edit'
@@ -13,14 +14,15 @@ interface Props {
   onDone?: () => void
 }
 
-const IMAGE_FIELDS = [
-  { field: 'location_image_url' as const, label: 'รูปสถานที่' },
-  { field: 'drug_license_image_url' as const, label: 'ใบอนุญาตขายยา' },
-  { field: 'hospital_license_image_url' as const, label: 'ใบอนุญาตสถานพยาบาล' },
-]
-
 export default function CustomerForm({ mode, initial, onDone }: Props) {
   const router = useRouter()
+  const { t } = useLanguage()
+
+  const IMAGE_FIELDS = [
+    { field: 'location_image_url' as const, label: t('cf.img_location') },
+    { field: 'drug_license_image_url' as const, label: t('cf.img_drug') },
+    { field: 'hospital_license_image_url' as const, label: t('cf.img_hospital') },
+  ]
 
   const [form, setForm] = useState({
     company_name: initial?.company_name ?? '',
@@ -46,7 +48,7 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const handleFile = (field: string, file: File) => {
-    if (file.size > 2 * 1024 * 1024) { setError('ไฟล์ใหญ่เกิน 2MB'); return }
+    if (file.size > 2 * 1024 * 1024) { setError(t('cf.file_too_big')); return }
     const reader = new FileReader()
     reader.onloadend = () => setForm((f) => ({ ...f, [field]: reader.result as string }))
     reader.readAsDataURL(file)
@@ -64,21 +66,21 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
     try {
       if (mode === 'request') {
         await customerRequestsApi.create(form)
-        showToast('success', 'ส่งคำขอเรียบร้อย รอผู้ดูแลตรวจสอบ')
+        showToast('success', t('cf.requested_ok'))
         setForm({ company_name: '', customer_code: '', zone_id: '', address: '', contact_name: '', phone: '', email: '', has_tax_id: false, tax_id: '', drug_license_number: '', location_image_url: '', drug_license_image_url: '', hospital_license_image_url: '' })
       } else if (mode === 'create') {
         await customersApi.create(form)
-        setSuccess('เพิ่มลูกค้าเรียบร้อย')
+        setSuccess(t('cf.created_ok'))
         if (onDone) onDone()
         else router.push('/dashboard/admin/customers')
       } else if (mode === 'edit') {
         await customersApi.update(initial.id, form)
-        setSuccess('แก้ไขเรียบร้อย')
+        setSuccess(t('cf.updated_ok'))
         if (onDone) onDone()
       }
     } catch (err: any) {
-      if (mode === 'request') showToast('error', err.message || 'ส่งคำขอไม่สำเร็จ')
-      else setError(err.message || 'บันทึกไม่สำเร็จ')
+      if (mode === 'request') showToast('error', err.message || t('cf.request_failed'))
+      else setError(err.message || t('cf.save_failed'))
     } finally {
       setSaving(false)
     }
@@ -92,49 +94,49 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
           {success && mode !== 'request' && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{success}</div>}
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-4">ข้อมูลบริษัท</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('cf.company_info')}</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">รหัสลูกค้า</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.customer_code')}</label>
                   <input value={form.customer_code} onChange={(e) => setForm({ ...form, customer_code: e.target.value })}
                     placeholder={initial ? '' : 'auto: CUS-0001'}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
-                  <p className="text-xs text-gray-400 mt-0.5">ปล่อยว่างเพื่อ auto-gen</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('cf.auto_gen_hint')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">เขตการขาย</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.zone')}</label>
                   <select value={form.zone_id ?? ''} onChange={(e) => setForm({ ...form, zone_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- ไม่ระบุ --</option>
+                    <option value="">{t('common.optional')}</option>
                     {zones.map((z) => <option key={z.id} value={z.id}>{z.code} - {z.name}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อบริษัท <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.company_name')} <span className="text-red-500">*</span></label>
                 <input required value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">ที่อยู่</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.address')}</label>
                 <textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อผู้ติดต่อ</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.contact_name')}</label>
                   <input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">เบอร์โทรศัพท์</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.phone')}</label>
                   <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">อีเมล</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.email')}</label>
                 <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -142,28 +144,28 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
           </div>
 
           <div className="pt-4 border-t border-gray-100">
-            <h3 className="font-semibold text-gray-900 mb-4">ข้อมูลภาษีและใบอนุญาต</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('cf.tax_license_info')}</h3>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">มีเลขผู้เสียภาษีหรือไม่?</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.has_tax_id')}</label>
                   <select value={form.has_tax_id ? 'yes' : 'no'} onChange={(e) => setForm({ ...form, has_tax_id: e.target.value === 'yes', tax_id: e.target.value === 'yes' ? form.tax_id : '' })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="no">ไม่มี</option>
-                    <option value="yes">มี</option>
+                    <option value="no">{t('cf.no')}</option>
+                    <option value="yes">{t('cf.has')}</option>
                   </select>
                 </div>
                 {form.has_tax_id && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">เลขประจำตัวผู้เสียภาษี <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.tax_id')} <span className="text-red-500">*</span></label>
                     <input required value={form.tax_id} onChange={(e) => setForm({ ...form, tax_id: e.target.value })}
-                      placeholder="เช่น 0105560001234"
+                      placeholder={t('cf.placeholder_tax')}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">เลขที่อนุญาตขายยา</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('cf.drug_license_no')}</label>
                 <input value={form.drug_license_number} onChange={(e) => setForm({ ...form, drug_license_number: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -171,8 +173,8 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
           </div>
 
           <div className="pt-4 border-t border-gray-100">
-            <h3 className="font-semibold text-gray-900 mb-4">รูปภาพและเอกสาร</h3>
-            <p className="text-xs text-gray-500 mb-3">อัพโหลดรูปจากเครื่อง (ไม่เกิน 2MB ต่อรูป)</p>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('cf.images_docs')}</h3>
+            <p className="text-xs text-gray-500 mb-3">{t('cf.upload_hint')}</p>
             <div className="space-y-4">
               {IMAGE_FIELDS.map((u) => (
                 <div key={u.field}>
@@ -186,7 +188,7 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
                   <div className="flex items-center gap-3">
                     <button type="button" onClick={() => fileRefs.current[u.field]?.click()}
                       className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                      <Upload size={14} /> อัพโหลดรูป
+                      <Upload size={14} /> {t('cf.upload')}
                     </button>
                     {form[u.field] && (
                       <div className="relative">
@@ -205,10 +207,10 @@ export default function CustomerForm({ mode, initial, onDone }: Props) {
 
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
             <button type="button" onClick={() => router.back()}
-              className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">ยกเลิก</button>
+              className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">{t('common.cancel')}</button>
             <button type="submit" disabled={saving}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-60">
-              {saving ? 'บันทึก...' : (mode === 'request' ? 'ส่งคำขอ' : 'บันทึก')}
+              {saving ? t('common.saving') : (mode === 'request' ? t('cf.send_request') : t('common.save'))}
             </button>
           </div>
         </form>
